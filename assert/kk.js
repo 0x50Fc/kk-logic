@@ -1,6 +1,6 @@
 
 
-var kk = {
+kk = {
     extend: function (proto, object) {
         var v = {};
         if (object) {
@@ -98,10 +98,10 @@ kk.Context.prototype = kk.extend(Object.prototype, {
         }
 
         if (keys.length == 0) {
-            return this.objec_objectsts[this._objects.length - 1];
+            return this._objects[this._objects.length - 1];
         }
 
-        var key = keys[i];
+        var key = keys[0];
         var i = this._objects.length - 1;
         var object;
 
@@ -121,7 +121,8 @@ kk.Context.prototype = kk.extend(Object.prototype, {
 
     set: function (keys, value) {
         var object = this._objects[this._objects.length - 1];
-        return kk.set(object, keys, value);
+        kk.set(object, keys, value);
+        return this;
     },
 
     evaluate: function (evaluate) {
@@ -149,8 +150,17 @@ kk.Context.prototype = kk.extend(Object.prototype, {
 });
 
 kk.Logic = function (object) {
-    this._object = object || {};
+    this._object = {};
     this._on = {};
+    if (object) {
+        for (var key in object) {
+            if (key.startsWith("on")) {
+                this.on(key.substr(2), object[key]);
+            } else {
+                this._object[key] = object[key];
+            }
+        }
+    }
 };
 
 kk.Logic.prototype = kk.extend(Object.prototype, {
@@ -163,20 +173,34 @@ kk.Logic.prototype = kk.extend(Object.prototype, {
                 value = ctx.evaluate(value.substr(1));
             }
 
+        } else if (typeof value == 'function') {
+            ctx.begin();
+            ctx.set(["object"], object);
+            ctx.set(["result"], null);
+            var vv = value(ctx, app);
+            var v = ctx.get(["result"]);
+            ctx.end();
+            if (vv !== undefined) {
+                return vv;
+            }
+            if (v !== null) {
+                return v;
+            }
+            return undefined;
         } else if (typeof value == 'object') {
 
             if (value instanceof kk.Logic) {
                 ctx.begin();
                 ctx.set(["object"], object);
                 ctx.set(["result"], null);
-                var v = ctx.get(["result"]);
                 value.exec(ctx, app);
+                var v = ctx.get(["result"]);
                 ctx.end();
                 if (v !== null) {
                     return v;
                 }
-            }
-            else if (value instanceof Array) {
+                return undefined;
+            } else if (value instanceof Array) {
                 var a = [];
                 for (var i = 0; i < value.length; i++) {
                     var v = value[i];
@@ -214,7 +238,7 @@ kk.Logic.prototype = kk.extend(Object.prototype, {
 
             var key = keys[index];
 
-            var v = this.evaluateValue(ctx, app, kk.get(object, key), object);
+            var v = this.evaluateValue(ctx, app, kk.get(object, [key]), object);
 
             if (v === undefined) {
                 return v;
@@ -228,7 +252,7 @@ kk.Logic.prototype = kk.extend(Object.prototype, {
     },
 
     exec: function (ctx, app) {
-        
+
     },
 
     on: function (name, fn) {
@@ -240,10 +264,36 @@ kk.Logic.prototype = kk.extend(Object.prototype, {
         var fn = this._on[name];
         if (typeof fn == 'function') {
             fn(ctx, app, this)
+        } else if (fn instanceof kk.Logic) {
+            fn.exec(ctx, app);
         }
     }
 
 });
 
-module.exports = kk;
+kk.App = function () {
+    this.logics = {};
+};
 
+kk.App.prototype = kk.extend(Object.prototype, {
+
+    exec: function (ctx, name) {
+        if (name === undefined) {
+            name = 'in';
+        }
+        var v = this.logics[name];
+        if (v instanceof kk.Logic) {
+            v.exec(ctx, this);
+        }
+    },
+
+    set: function (name, logic) {
+        this.logics[name] = logic;
+        return this;
+    },
+
+    log: function (text) {
+
+    }
+
+});

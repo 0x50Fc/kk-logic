@@ -23,8 +23,3 @@ void RecycleContext(struct Context * v) {
     free(v);
 }
 
-duk_ret_t Throw(duk_context * ctx, const char * errmsg) {
-    duk_push_error_object(ctx,DUK_ERR_ERROR,"%s",errmsg);
-	return duk_throw(ctx);
-}
-

@@ -196,13 +196,6 @@ func Dup(ctx Context,idx int) {
 	C.duk_dup(ctx.ctx,C.duk_idx_t(idx))
 }
 
-func Throw(ctx Context,errmsg string) int {
-	v := C.CString(errmsg)
-	r := int(C.Throw(ctx.ctx,v))
-	C.free(unsafe.Pointer(v))
-	return r
-}
-
 func  ToInt(ctx Context,idx int) int {
 	return int(C.duk_to_int(ctx.ctx,C.duk_idx_t(idx)));
 }
@@ -483,6 +476,10 @@ func GetHeapptr(ctx Context,idx int) unsafe.Pointer {
 
 func PushHeapptr(ctx Context, heapptr unsafe.Pointer) {
 	C.duk_push_heapptr(ctx.ctx,heapptr);
+}
+
+func PushThis(ctx Context) {
+	C.duk_push_this(ctx.ctx);
 }
 
 //export go_ObjectDealloc

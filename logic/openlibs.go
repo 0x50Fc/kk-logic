@@ -30,6 +30,9 @@ func init() {
 
 		openlib(app, ctx, "require.js")
 		openlib(app, ctx, "kk.js")
+		openlib(app, ctx, "kk-date.js")
+		openlib(app, ctx, "kk-logic-var.js")
+		openlib(app, ctx, "kk-logic-http.js")
 
 	})
 
