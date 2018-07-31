@@ -149,7 +149,7 @@ kk.Context.prototype = kk.extend(Object.prototype, {
     }
 });
 
-kk.Logic = function (object) {
+kk.Logic = function (object,app) {
     this._object = {};
     this._on = {};
     if (object) {
@@ -264,6 +264,11 @@ kk.Logic.prototype = kk.extend(Object.prototype, {
         var fn = this._on[name];
         if (typeof fn == 'function') {
             fn(ctx, app, this)
+        } else if(typeof fn == 'string') {
+            var v = app.get(fn);
+            if(v && v instanceof kk.Logic) {
+                v.exec(ctx,app);
+            }
         } else if (fn instanceof kk.Logic) {
             fn.exec(ctx, app);
         }
@@ -292,8 +297,66 @@ kk.App.prototype = kk.extend(Object.prototype, {
         return this;
     },
 
+    get : function(name) {
+        return this.logics[name];
+    },
+
     log: function (text) {
 
     }
 
 });
+
+kk.run = function(object) {
+
+    var ctx = new kk.Context();
+    var input = {};
+
+    if (typeof _GET == 'object') {
+        for (var key in _GET) {
+            input[key] = _GET[key];
+        }
+    }
+
+    if (typeof _POST == 'object') {
+        for (var key in _POST) {
+            input[key] = _POST[key];
+        }
+    }
+
+    ctx.set(["input"], input);
+    ctx.set(["output"], {});
+    ctx.set(["userAgent"], _HEADER['User-Agent']);
+    ctx.set(["headers"], _HEADER);
+    ctx.set(["url"], _REQUEST['url']);
+    ctx.set(["path"], _REQUEST['path']);
+    ctx.set(["hostname"], _REQUEST['hostname']);
+    ctx.set(["protocol"], _REQUEST['protocol']);
+
+    var app = new kk.App();
+
+    for(var key in object) {
+        app.set(key,object[key]);
+    }
+    
+    app.exec(ctx);
+
+    var v = ctx.get(["view"]);
+
+    if(v !== undefined) {
+
+        if(v.headers) {
+            for(var key in v.headers) {
+                header(key, v.headers[key]);
+            }
+        }
+
+        echo(v.content);
+
+    } else {
+        header("Content-Type", "application/json; charset=utf-8");
+        echo(JSON.stringify(ctx.get(["output"])));
+    }
+    
+};
+

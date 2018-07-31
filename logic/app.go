@@ -170,6 +170,31 @@ func (A *App) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 			duktape.PutProp(ctx, -3)
 
+			duktape.PushString(ctx, "_REQUEST")
+			duktape.PushObject(ctx)
+
+			duktape.PushString(ctx, "url")
+			duktape.PushString(ctx, req.URL.String())
+			duktape.PutProp(ctx, -3)
+
+			duktape.PushString(ctx, "method")
+			duktape.PushString(ctx, req.Method)
+			duktape.PutProp(ctx, -3)
+
+			duktape.PushString(ctx, "path")
+			duktape.PushString(ctx, req.URL.Path)
+			duktape.PutProp(ctx, -3)
+
+			duktape.PushString(ctx, "protocol")
+			duktape.PushString(ctx, req.URL.Scheme)
+			duktape.PutProp(ctx, -3)
+
+			duktape.PushString(ctx, "hostname")
+			duktape.PushString(ctx, req.URL.Hostname())
+			duktape.PutProp(ctx, -3)
+
+			duktape.PutProp(ctx, -3)
+
 			duktape.PushString(ctx, "_HEADER")
 			duktape.PushObject(ctx)
 
