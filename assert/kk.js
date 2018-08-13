@@ -86,7 +86,7 @@ kk.set = function (object, keys, value, index) {
 };
 
 kk.Context = function () {
-    this._objects = [{}];
+    this._objects = [{ output: {} }];
 };
 
 kk.Context.prototype = kk.extend(Object.prototype, {
@@ -149,7 +149,7 @@ kk.Context.prototype = kk.extend(Object.prototype, {
     }
 });
 
-kk.Logic = function (object,app) {
+kk.Logic = function (object, app) {
     this._object = {};
     this._on = {};
     if (object) {
@@ -264,10 +264,10 @@ kk.Logic.prototype = kk.extend(Object.prototype, {
         var fn = this._on[name];
         if (typeof fn == 'function') {
             fn(ctx, app, this)
-        } else if(typeof fn == 'string') {
+        } else if (typeof fn == 'string') {
             var v = app.get(fn);
-            if(v && v instanceof kk.Logic) {
-                v.exec(ctx,app);
+            if (v && v instanceof kk.Logic) {
+                v.exec(ctx, app);
             }
         } else if (fn instanceof kk.Logic) {
             fn.exec(ctx, app);
@@ -276,8 +276,13 @@ kk.Logic.prototype = kk.extend(Object.prototype, {
 
 });
 
-kk.App = function () {
+kk.App = function (object) {
     this.logics = {};
+    if(object) {
+        for (var key in object) {
+            this.set(key, object[key]);
+        }
+    }
 };
 
 kk.App.prototype = kk.extend(Object.prototype, {
@@ -297,7 +302,7 @@ kk.App.prototype = kk.extend(Object.prototype, {
         return this;
     },
 
-    get : function(name) {
+    get: function (name) {
         return this.logics[name];
     },
 
@@ -307,7 +312,7 @@ kk.App.prototype = kk.extend(Object.prototype, {
 
 });
 
-kk.run = function(object) {
+kk.run = function (object) {
 
     var ctx = new kk.Context();
     var input = {};
@@ -333,20 +338,16 @@ kk.run = function(object) {
     ctx.set(["hostname"], _REQUEST['hostname']);
     ctx.set(["protocol"], _REQUEST['protocol']);
 
-    var app = new kk.App();
+    var app = new kk.App(object);
 
-    for(var key in object) {
-        app.set(key,object[key]);
-    }
-    
     app.exec(ctx);
 
     var v = ctx.get(["view"]);
 
-    if(v !== undefined) {
+    if (v !== undefined) {
 
-        if(v.headers) {
-            for(var key in v.headers) {
+        if (v.headers) {
+            for (var key in v.headers) {
                 header(key, v.headers[key]);
             }
         }
@@ -357,6 +358,6 @@ kk.run = function(object) {
         header("Content-Type", "application/json; charset=utf-8");
         echo(JSON.stringify(ctx.get(["output"])));
     }
-    
+
 };
 

@@ -3,8 +3,8 @@ package logic
 import (
 	"log"
 
+	"github.com/hailongz/kk-lib/duktape"
 	"github.com/hailongz/kk-logic/assert"
-	"github.com/hailongz/kk-logic/duktape"
 )
 
 func openlib(app IApp, ctx duktape.Context, name string) {
@@ -33,6 +33,9 @@ func init() {
 		openlib(app, ctx, "kk-date.js")
 		openlib(app, ctx, "kk-logic-var.js")
 		openlib(app, ctx, "kk-logic-http.js")
+		openlib(app, ctx, "kk-logic-each.js")
+		openlib(app, ctx, "kk-logic-outlet.js")
+		openlib(app, ctx, "kk-logic-app.js")
 
 	})
 

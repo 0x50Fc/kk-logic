@@ -2,8 +2,6 @@ package logic
 
 import (
 	"bytes"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,22 +9,13 @@ import (
 	URL "net/url"
 	"strings"
 
-	"github.com/hailongz/kk-logic/duktape"
+	"github.com/hailongz/kk-lib/duktape"
+	xhttp "github.com/hailongz/kk-lib/http"
 )
-
-var ca *x509.CertPool
 
 func init() {
 
-	ca = x509.NewCertPool()
-	ca.AppendCertsFromPEM(pemCerts)
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig:   &tls.Config{RootCAs: ca},
-			DisableKeepAlives: false,
-		},
-	}
+	client := xhttp.NewClient()
 
 	AddProtocol(func(app IApp, ctx duktape.Context) {
 

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hailongz/kk-logic/duktape"
+	"github.com/hailongz/kk-lib/duktape"
 )
 
 func init() {

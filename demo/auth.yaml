@@ -1,0 +1,10 @@
+
+in:
+  $class: kk.Logic.Var
+  key: output.uid
+  value: 111
+  ondone: done
+ 
+done:
+  $class: kk.Logic.Outlet
+  title: 验证成功

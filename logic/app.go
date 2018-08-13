@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hailongz/kk-logic/duktape"
+	"github.com/hailongz/kk-lib/duktape"
 )
 
 import "C"
@@ -73,6 +73,14 @@ func (A *App) ExecCode(name string, code string, protocols []IProtocol) error {
 		for _, protocol := range protocols {
 			protocol(A, ctx)
 		}
+	}
+
+	if A.cached == nil {
+		duktape.PushGlobalObject(ctx)
+		duktape.PushString(ctx, "debug")
+		duktape.PushBoolean(ctx, true)
+		duktape.PutProp(ctx, -3)
+		duktape.Pop(ctx, 1)
 	}
 
 	duktape.PushString(ctx, name)
