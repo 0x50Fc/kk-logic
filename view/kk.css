@@ -1,0 +1,29 @@
+
+body {
+    padding: 0px;
+    margin: 0px;
+    background-color: #fff;
+}
+
+.kk-app {
+    position: relative;
+}
+
+.kk-element {
+    position: absolute;
+    font-size: 14px;
+    color: #333;
+    text-align: left;
+    padding: 0px;
+    margin: 0px;
+    border: solid 1px #e5e5e5;
+    border-radius: 4px;
+    box-sizing: border-box;
+    min-width: 120px;
+}
+
+.kk-element span,.kk-element a {
+    display: inline-block;
+    margin: 6px 10px;
+}
+

@@ -1,4 +1,6 @@
 
+title: 首页接口
+
 in:
   $class: kk.Logic.App
   path: ../auth.js
