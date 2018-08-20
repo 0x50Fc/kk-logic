@@ -329,6 +329,10 @@ kk.run = function (object) {
         }
     }
 
+    if (typeof _SESSIONID == 'string') {
+        ctx.set(["sessionId"], _SESSIONID);
+    }
+
     ctx.set(["input"], input);
     ctx.set(["output"], {});
     ctx.set(["userAgent"], _HEADER['User-Agent']);

@@ -16,7 +16,8 @@ func main() {
 	dir := "."
 	port := 8080
 	cached := true
-
+	sessionKey := "kk"
+	sessionMaxAge := 1800
 	{
 		i := 1
 		n := len(os.Args)
@@ -54,13 +55,27 @@ func main() {
 				i += 2
 				continue
 
+			} else if v == "--sessionKey" && i+1 < n {
+
+				sessionKey = os.Args[i+1]
+
+				i += 2
+				continue
+
+			} else if v == "--sessionMaxAge" && i+1 < n {
+
+				sessionMaxAge, _ = strconv.Atoi(os.Args[i+1])
+
+				i += 2
+				continue
+
 			}
 			i += 1
 		}
 
 	}
 
-	app := logic.NewApp(dir, cached)
+	app := logic.NewApp(dir, cached, sessionKey, sessionMaxAge)
 
 	log.Println("PORT: ", port)
 	log.Println("CACHED: ", cached)

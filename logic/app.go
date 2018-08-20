@@ -1,12 +1,17 @@
 package logic
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hailongz/kk-lib/duktape"
 )
@@ -21,6 +26,8 @@ type IApp interface {
 	ExecCode(name string, code string, protocols []IProtocol) error
 	Clear()
 	ServeHTTP(resp http.ResponseWriter, req *http.Request)
+	SessionKey() string
+	SessionMaxAge() int
 }
 
 var g_protocols = []IProtocol{}
@@ -30,16 +37,20 @@ func AddProtocol(protocol IProtocol) {
 }
 
 type App struct {
-	fs     http.Handler
-	dir    string
-	cached map[string]string
-	lock   sync.RWMutex
+	fs            http.Handler
+	dir           string
+	cached        map[string]string
+	lock          sync.RWMutex
+	sessionKey    string
+	sessionMaxAge int
 }
 
-func NewApp(dir string, cached bool) IApp {
+func NewApp(dir string, cached bool, sessionKey string, SessionMaxAge int) IApp {
 	v := App{}
 	v.fs = http.FileServer(http.Dir(dir))
 	v.dir = dir
+	v.sessionKey = sessionKey
+	v.sessionMaxAge = SessionMaxAge
 	if cached {
 		v.cached = map[string]string{}
 	}
@@ -52,6 +63,14 @@ func (A *App) Clear() {
 		A.cached = map[string]string{}
 		A.lock.Unlock()
 	}
+}
+
+func (A *App) SessionKey() string {
+	return A.sessionKey
+}
+
+func (A *App) SessionMaxAge() int {
+	return A.sessionMaxAge
 }
 
 func (A *App) Path() string {
@@ -137,6 +156,14 @@ func (A *App) Exec(path string, protocols []IProtocol) error {
 	return A.ExecCode(path, code, protocols)
 }
 
+func newSessionId() string {
+	v := time.Now()
+	m := md5.New()
+	rand.Seed(int64(v.Nanosecond()))
+	m.Write([]byte(fmt.Sprintf("kk_%d-%d..", v.Nanosecond(), rand.Int())))
+	return hex.EncodeToString(m.Sum(nil))
+}
+
 func (A *App) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	if strings.HasSuffix(req.URL.Path, ".json") {
@@ -217,11 +244,28 @@ func (A *App) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 			duktape.PushString(ctx, "_COOKIE")
 			duktape.PushObject(ctx)
 
+			sessionKey := app.SessionKey()
+			sessionId := ""
+
 			for _, cookie := range req.Cookies() {
 				duktape.PushString(ctx, cookie.Name)
 				duktape.PushString(ctx, cookie.Value)
 				duktape.PutProp(ctx, -3)
+				if cookie.Name == sessionKey {
+					sessionId = cookie.Value
+				}
 			}
+
+			if sessionId == "" {
+				sessionId = newSessionId()
+				cookie := http.Cookie{Name: sessionKey, Value: sessionId, Path: "/", HttpOnly: true, MaxAge: app.SessionMaxAge()}
+				http.SetCookie(resp, &cookie)
+			}
+
+			duktape.PushString(ctx, "_SESSIONID")
+			duktape.PushObject(ctx)
+			duktape.PushString(ctx, sessionId)
+			duktape.PutProp(ctx, -3)
 
 			duktape.PutProp(ctx, -3)
 
