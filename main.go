@@ -6,8 +6,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/hailongz/kk-logic/logic"
+	_ "github.com/hailongz/kk-logic/logic/captcha"
+	_ "github.com/hailongz/kk-logic/logic/http"
+	_ "github.com/hailongz/kk-logic/logic/lib"
+	_ "github.com/hailongz/kk-logic/logic/redis"
 )
 
 func main() {
@@ -18,6 +23,8 @@ func main() {
 	cached := true
 	sessionKey := "kk"
 	sessionMaxAge := 1800
+	maxMemory := int64(4096000)
+
 	{
 		i := 1
 		n := len(os.Args)
@@ -69,20 +76,36 @@ func main() {
 				i += 2
 				continue
 
+			} else if v == "--maxMemory" && i+1 < n {
+
+				maxMemory, _ = strconv.ParseInt(os.Args[i+1], 10, 64)
+
+				i += 2
+				continue
+
 			}
 			i += 1
 		}
 
 	}
 
-	app := logic.NewApp(dir, cached, sessionKey, sessionMaxAge)
+	var store logic.IStore = nil
+
+	if cached {
+		store = logic.NewMemStore(dir, 6*time.Second)
+	} else {
+		store = logic.NewFileStore(dir)
+	}
+
+	session := logic.NewSession(sessionKey, sessionMaxAge)
 
 	log.Println("PORT: ", port)
 	log.Println("CACHED: ", cached)
 	log.Println("ROOT: ", dir)
 	log.Println("PREFIX: ", prefix)
+	log.Println("maxMemory: ", maxMemory)
 
-	http.Handle(prefix, app)
+	http.HandleFunc(prefix, logic.HandlerFunc(store, session, maxMemory))
 
 	srv := &http.Server{
 		Addr: fmt.Sprintf(":%d", port),
