@@ -41,6 +41,7 @@ func NewLogic(class string, object interface{}) ILogic {
 
 func Openlib(class string, creator LogicCreator) {
 	globalLogicCreator[class] = creator
+	log.Printf("[OPENLIB] [%s] [OK]\n", class)
 }
 
 func init() {
@@ -69,7 +70,12 @@ func (L *Logic) Init(object interface{}) {
 		skey := dynamic.StringValue(key, "")
 
 		if strings.HasPrefix(skey, "on") {
-			L.On(skey[2:], value)
+			class := dynamic.StringValue(dynamic.Get(value, "$class"), "")
+			if class != "" {
+				L.On(skey[2:], NewLogic(class, value))
+			} else {
+				L.On(skey[2:], value)
+			}
 		}
 
 		return true
@@ -162,7 +168,7 @@ func (L *Logic) Get(ctx IContext, app IApp, key string) interface{} {
 }
 
 func (L *Logic) Exec(ctx IContext, app IApp) error {
-	log.Println("[EXEC]", app.Path(), L.tag)
+	log.Println("[EXEC]", app.Path(), ">>", L.tag)
 	return nil
 }
 
@@ -185,7 +191,7 @@ func (L *Logic) Error(ctx IContext, app IApp, err error) error {
 
 func (L *Logic) Done(ctx IContext, app IApp, name string) error {
 
-	log.Println("[DONE]", app.Path(), L.tag, name)
+	log.Println("[DONE]", app.Path(), ">>", L.tag, ">>", name)
 
 	fn, ok := L.on[name]
 

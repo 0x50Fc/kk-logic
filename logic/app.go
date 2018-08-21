@@ -1,12 +1,13 @@
 package logic
 
 import (
+	"log"
 	"strings"
 
 	"github.com/hailongz/kk-lib/dynamic"
 )
 
-var globalIgnoreKeys = map[string]bool{"title": true, "type": true, "meta": true}
+var globalIgnoreKeys = map[string]bool{"title": true, "type": true, "meta": true, "input": true}
 
 type IApp interface {
 	Path() string
@@ -21,6 +22,12 @@ type App struct {
 	store  IStore
 	object interface{}
 	logics map[string]interface{}
+}
+
+func SetGlobalIgnoreKey(keys ...string) {
+	for _, key := range keys {
+		globalIgnoreKeys[key] = true
+	}
 }
 
 func NewApp(object interface{}, store IStore, path string) *App {
@@ -73,6 +80,8 @@ func (A *App) Path() string {
 }
 
 func (A *App) Exec(ctx IContext, name string) error {
+
+	log.Printf("[APP] [EXEC] %s >> %s", A.path, name)
 
 	v, ok := A.logics[name]
 

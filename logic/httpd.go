@@ -129,7 +129,7 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 				})
 
 				ctx.Set(SessionIdKeys, session.Http(resp, req))
-				ctx.Set(OutputKeys, map[string]interface{}{})
+				ctx.Set(OutputKeys, map[string]interface{}{"errno": ERROR_OK})
 
 				err = app.Exec(ctx, "in")
 
