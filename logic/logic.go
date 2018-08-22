@@ -41,7 +41,7 @@ func NewLogic(class string, object interface{}) ILogic {
 
 func Openlib(class string, creator LogicCreator) {
 	globalLogicCreator[class] = creator
-	log.Printf("[OPENLIB] [%s] [OK]\n", class)
+	// log.Printf("[OPENLIB] [%s] [OK]\n", class)
 }
 
 func init() {
