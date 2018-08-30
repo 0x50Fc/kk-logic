@@ -7,7 +7,6 @@ import (
 const (
 	ERROR_UNKNOWN = 400
 	ERROR_INPUT   = 401
-	ERROR_OK      = 200
 )
 
 type Error struct {

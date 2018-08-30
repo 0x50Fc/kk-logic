@@ -27,7 +27,7 @@ func (L *InputLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 
 	method := dynamic.Get(input, "method")
 
-	if method != nil && dynamic.StringValue(method, "") != dynamic.StringValue(ctx.Get([]string{"method"}), "GET") {
+	if method != nil && dynamic.StringValue(method, "") != dynamic.StringValue(ctx.Get(logic.MethodKeys), "GET") {
 		err = logic.NewError(logic.ERROR_INPUT, "不支持的方法")
 	}
 

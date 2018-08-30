@@ -2,7 +2,6 @@ package logic
 
 import (
 	"log"
-	"strings"
 
 	"github.com/hailongz/kk-lib/dynamic"
 )
@@ -92,13 +91,7 @@ func (A *App) Exec(ctx IContext, name string) error {
 	{
 		s, ok := v.(string)
 		if ok {
-
-			if strings.HasPrefix(s, "function(") {
-				ctx.Call(s, name)
-			} else {
-				return A.Exec(ctx, s)
-			}
-			return nil
+			return A.Exec(ctx, s)
 		}
 	}
 

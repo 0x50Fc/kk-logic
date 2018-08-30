@@ -24,7 +24,7 @@ type ILogic interface {
 }
 
 type Logic struct {
-	tag    string
+	Tag    string
 	object interface{}
 	on     map[string]interface{}
 }
@@ -55,14 +55,14 @@ func init() {
 func (L *Logic) Init(object interface{}) {
 	L.object = object
 	L.on = map[string]interface{}{}
-	L.tag = dynamic.StringValue(dynamic.Get(L.object, "$id"), "")
+	L.Tag = dynamic.StringValue(dynamic.Get(L.object, "$id"), "")
 
-	if L.tag == "" {
-		L.tag = dynamic.StringValue(dynamic.Get(L.object, "$tag"), "")
+	if L.Tag == "" {
+		L.Tag = dynamic.StringValue(dynamic.Get(L.object, "$tag"), "")
 	}
 
-	if L.tag == "" {
-		L.tag = dynamic.StringValue(dynamic.Get(L.object, "$class"), "")
+	if L.Tag == "" {
+		L.Tag = dynamic.StringValue(dynamic.Get(L.object, "$class"), "")
 	}
 
 	dynamic.Each(object, func(key interface{}, value interface{}) bool {
@@ -96,21 +96,7 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 		s, ok := value.(string)
 		if ok {
 			if strings.HasPrefix(s, "=") {
-				return ctx.Evaluate(s[1:], L.tag)
-			} else if strings.HasPrefix(s, "function(") {
-				ctx.Begin()
-
-				ctx.Set(ObjectKeys, object)
-				ctx.Set(ResultKeys, nil)
-
-				v, _ := ctx.Call(s, L.tag)
-
-				if v == nil {
-					v = ctx.Get(ResultKeys)
-				}
-
-				ctx.End()
-				return v
+				return ctx.Evaluate(s[1:], L.Tag)
 			}
 			return s
 		}
@@ -160,6 +146,21 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 		}
 	}
 
+	{
+		s, ok := value.(map[interface{}]interface{})
+
+		if ok {
+			v := map[string]interface{}{}
+			for key, i := range s {
+				vv := L.EvaluateValue(ctx, app, i, object)
+				if vv != nil {
+					v[dynamic.StringValue(key, "")] = vv
+				}
+			}
+			return v
+		}
+	}
+
 	return value
 }
 
@@ -168,7 +169,7 @@ func (L *Logic) Get(ctx IContext, app IApp, key string) interface{} {
 }
 
 func (L *Logic) Exec(ctx IContext, app IApp) error {
-	log.Println("[EXEC]", app.Path(), ">>", L.tag)
+	log.Println("[EXEC]", app.Path(), ">>", L.Tag)
 	return nil
 }
 
@@ -191,7 +192,7 @@ func (L *Logic) Error(ctx IContext, app IApp, err error) error {
 
 func (L *Logic) Done(ctx IContext, app IApp, name string) error {
 
-	log.Println("[DONE]", app.Path(), ">>", L.tag, ">>", name)
+	log.Println("[DONE]", app.Path(), ">>", L.Tag, ">>", name)
 
 	fn, ok := L.on[name]
 
@@ -199,13 +200,9 @@ func (L *Logic) Done(ctx IContext, app IApp, name string) error {
 
 		{
 			s, ok := fn.(string)
+
 			if ok {
-				if strings.HasPrefix(s, "function(") {
-					_, err := ctx.Call(s, L.tag)
-					return err
-				} else {
-					return app.Exec(ctx, s)
-				}
+				return app.Exec(ctx, s)
 			}
 		}
 

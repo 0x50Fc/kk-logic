@@ -27,6 +27,7 @@ var HeadersKeys = []string{"headers"}
 var ParamsKeys = []string{"params"}
 var ErrorKeys = []string{"error"}
 var KeyKeys = []string{"key"}
+var MethodKeys = []string{"method"}
 
 const (
 	DUK_DEFPROP_WRITABLE          = (1 << 0)
@@ -50,7 +51,7 @@ type IContext interface {
 	Set(keys []string, value interface{})
 	SetGlobal(key string, value interface{})
 	Evaluate(evaluateCode string, name string) interface{}
-	Call(evaluateCode string, name string) (interface{}, error)
+	Call(evaluateCode string, name string, done func(name string)) error
 	Recycle()
 	AddRecycle(fn func())
 }
@@ -310,8 +311,6 @@ func toValue(jsContext *duktape.Context, idx int) interface{} {
 		jsContext.Pop()
 
 		return v
-	} else {
-		log.Println("[<<<]", jsContext.GetType(idx))
 	}
 
 	return nil
@@ -344,13 +343,12 @@ func dumpError(jsContext *duktape.Context, tag string, idx int) {
 
 }
 
-func (C *Context) Call(evaluateCode string, name string) (interface{}, error) {
+func (C *Context) Call(evaluateCode string, name string, done func(name string)) error {
 
-	var v interface{} = nil
 	var err error = nil
 
 	C.jsContext.PushString(name)
-	C.jsContext.CompileStringFilename(0, fmt.Sprintf("(%s)", evaluateCode))
+	C.jsContext.CompileStringFilename(0, fmt.Sprintf("(function(ctx,done){ %s })", evaluateCode))
 
 	if C.jsContext.IsFunction(-1) {
 
@@ -360,17 +358,27 @@ func (C *Context) Call(evaluateCode string, name string) (interface{}, error) {
 
 				pushContext(C.jsContext, C)
 
-				if C.jsContext.Pcall(1) == duktape.ExecSuccess {
-					v = toValue(C.jsContext, -1)
+				C.jsContext.PushGoFunction(func(jsContext *duktape.Context) int {
+					top := jsContext.GetTop()
+
+					if top > 0 && jsContext.IsString(-top) {
+						done(jsContext.ToString(-top))
+					}
+
+					return 0
+				})
+
+				if C.jsContext.Pcall(2) == duktape.ExecSuccess {
+
 				} else {
-					dumpError(C.jsContext, "[CONTEXT] [NEWFUNCTION]", -1)
+					dumpError(C.jsContext, "[CONTEXT] [CALL]", -1)
 					err = errors.New(getErrorString(C.jsContext, -1))
 				}
 
 			}
 
 		} else {
-			dumpError(C.jsContext, "[CONTEXT] [NEWFUNCTION]", -1)
+			dumpError(C.jsContext, "[CONTEXT] [CALL]", -1)
 			err = errors.New(getErrorString(C.jsContext, -1))
 		}
 
@@ -378,7 +386,7 @@ func (C *Context) Call(evaluateCode string, name string) (interface{}, error) {
 
 	C.jsContext.Pop()
 
-	return v, err
+	return err
 }
 
 func (C *Context) Evaluate(evaluateCode string, name string) interface{} {

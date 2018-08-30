@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -70,13 +71,13 @@ func (L *RedisGetLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	v := ctx.Get([]string{name})
 
 	if v == nil {
-		return L.Done(ctx, app, "done")
+		return L.Error(ctx, app, logic.NewError(logic.ERROR_UNKNOWN, fmt.Sprintf("未找到 Redis [%s]", name)))
 	}
 
 	r, ok := v.(*Redis)
 
 	if !ok {
-		return L.Done(ctx, app, "done")
+		return L.Error(ctx, app, logic.NewError(logic.ERROR_UNKNOWN, fmt.Sprintf("未找到 Redis [%s]", name)))
 	}
 
 	vv, err := r.client.Get(key).Result()

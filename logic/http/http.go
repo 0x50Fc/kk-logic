@@ -1,6 +1,8 @@
 package http
 
 import (
+	"log"
+
 	"github.com/hailongz/kk-lib/dynamic"
 	"github.com/hailongz/kk-lib/http"
 	"github.com/hailongz/kk-logic/logic"
@@ -14,6 +16,8 @@ func (L *HttpLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 
 	L.Logic.Exec(ctx, app)
 
+	checkType := dynamic.StringValue(L.Get(ctx, app, "checkType"), "errno")
+
 	options := http.Options{}
 
 	options.Method = dynamic.StringValue(L.Get(ctx, app, "method"), "GET")
@@ -25,11 +29,17 @@ func (L *HttpLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	v, err := http.Send(&options)
 
 	if err != nil {
-		if L.Has("error") {
-			ctx.Set(logic.ErrorKeys, logic.GetErrorObject(err))
-			return L.Done(ctx, app, "error")
+		return L.Error(ctx, app, err)
+	}
+
+	log.Println("[HTTP]", v, err)
+
+	if checkType == "errno" {
+		if dynamic.Get(v, "errno") != nil {
+			errno := int(dynamic.IntValue(dynamic.Get(v, "errno"), logic.ERROR_UNKNOWN))
+			errmsg := dynamic.StringValue(dynamic.Get(v, "errmsg"), "未知错误")
+			return L.Error(ctx, app, logic.NewError(errno, errmsg))
 		}
-		return err
 	}
 
 	ctx.Set(logic.ResultKeys, v)
