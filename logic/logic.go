@@ -132,6 +132,15 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 	}
 
 	{
+		s := dynamic.StringValue(dynamic.Get(value, "$class"), "")
+
+		if s != "" {
+			logic := NewLogic(s, value)
+			return L.EvaluateValue(ctx, app, logic, object)
+		}
+	}
+
+	{
 		s, ok := value.(map[string]interface{})
 
 		if ok {

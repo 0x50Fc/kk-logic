@@ -54,11 +54,20 @@ func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 
 	L.Logic.Exec(ctx, app)
 
+	key := dynamic.StringValue(L.Get(ctx, app, "key"), "")
 	value := L.Get(ctx, app, "value")
 	fields := dynamic.Get(L.Object(), "fields")
 
+	var keys []string = nil
+
+	if key == "" {
+		keys = logic.RefererKeys
+	} else {
+		keys = strings.Split(key, ".")
+	}
+
 	if value == nil {
-		ctx.Set(logic.ResultKeys, nil)
+		ctx.Set(keys, nil)
 		return L.Done(ctx, app, "done")
 	}
 
@@ -73,7 +82,7 @@ func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 					v = append(v, vv)
 				}
 			}
-			ctx.Set(logic.ResultKeys, v)
+			ctx.Set(keys, v)
 			return L.Done(ctx, app, "done")
 		}
 	}
@@ -89,7 +98,7 @@ func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 					v[key] = vv
 				}
 			}
-			ctx.Set(logic.ResultKeys, v)
+			ctx.Set(keys, v)
 			return L.Done(ctx, app, "done")
 		}
 	}

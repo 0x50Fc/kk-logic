@@ -1,8 +1,6 @@
 package http
 
 import (
-	"log"
-
 	"github.com/hailongz/kk-lib/dynamic"
 	"github.com/hailongz/kk-lib/http"
 	"github.com/hailongz/kk-logic/logic"
@@ -31,8 +29,6 @@ func (L *HttpLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	if err != nil {
 		return L.Error(ctx, app, err)
 	}
-
-	log.Println("[HTTP]", v, err)
 
 	if checkType == "errno" {
 		if dynamic.Get(v, "errno") != nil {
