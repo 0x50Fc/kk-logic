@@ -24,5 +24,5 @@ VOLUME /home
 
 EXPOSE 80
 
-CMD kk-logic -p $KK_ENV_PORT -r $KK_ENV_DIR --prefix $KK_ENV_PREFIX --sessionKey $KK_ENV_SESSION_KEY --sessionMaxAge $KK_ENV_SESSION_MAX_AGE --maxMemory $KK_ENV_MAX_MEMORY
+CMD kk-logic -p $KK_ENV_PORT -r $KK_ENV_DIR --prefix $KK_ENV_PREFIX --sessionKey $KK_ENV_SESSION_KEY --sessionMaxAge $KK_ENV_SESSION_MAX_AGE --maxMemory $KK_ENV_MAX_MEMORY $KK_ENV_FLAGS
 
