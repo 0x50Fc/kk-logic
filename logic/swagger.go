@@ -85,6 +85,12 @@ func (S *Swagger) Object(store IStore) interface{} {
 		contentType := dynamic.StringValue(dynamic.Get(app.Object(), "contentType"), "application/json")
 		method := dynamic.StringValue(dynamic.Get(input, "method"), "POST")
 
+		in := "query"
+
+		if method == "POST" {
+			in = "formData"
+		}
+
 		parameters := []interface{}{}
 
 		dynamic.Each(dynamic.Get(input, "fields"), func(key interface{}, field interface{}) bool {
@@ -92,7 +98,7 @@ func (S *Swagger) Object(store IStore) interface{} {
 			parameters = append(parameters, map[string]interface{}{
 				"name":        dynamic.StringValue(dynamic.Get(field, "name"), ""),
 				"description": dynamic.StringValue(dynamic.Get(field, "title"), ""),
-				"in":          "formData",
+				"in":          in,
 				"type":        S.getType(dynamic.StringValue(dynamic.Get(field, "type"), "string")),
 				"pattern":     dynamic.StringValue(dynamic.Get(field, "pattern"), ""),
 				"required":    dynamic.BooleanValue(dynamic.Get(field, "required"), false),
@@ -110,7 +116,7 @@ func (S *Swagger) Object(store IStore) interface{} {
 		consumes := []interface{}{"application/x-www-form-urlencoded"}
 
 		if method == "POST" {
-			consumes = append(produces, "multipart/form-data")
+			consumes = append(consumes, "multipart/form-data")
 		}
 
 		object := map[string]interface{}{
