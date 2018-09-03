@@ -29,6 +29,10 @@ var ErrorKeys = []string{"error"}
 var KeyKeys = []string{"key"}
 var MethodKeys = []string{"method"}
 
+type _Nil struct{}
+
+var Nil = &_Nil{}
+
 const (
 	DUK_DEFPROP_WRITABLE          = (1 << 0)
 	DUK_DEFPROP_ENUMERABLE        = (1 << 1)
@@ -56,16 +60,45 @@ type IContext interface {
 	AddRecycle(fn func())
 }
 
+type scope struct {
+	object map[string]interface{}
+	keys   map[string]bool
+}
+
+func newScope() *scope {
+	v := scope{}
+	v.object = map[string]interface{}{}
+	v.keys = map[string]bool{}
+	return &v
+}
+
+func (s *scope) Set(key string, value interface{}) {
+	if value == nil {
+		delete(s.object, key)
+	} else {
+		s.object[key] = value
+	}
+	s.keys[key] = true
+}
+
+func (s *scope) Get(key string) interface{} {
+	return s.object[key]
+}
+
+func (s *scope) Has(key string) bool {
+	return s.keys[key]
+}
+
 type Context struct {
 	jsContext *duktape.Context
-	scopes    []interface{}
+	scopes    []*scope
 	recycles  []func()
 }
 
 func NewContext() IContext {
 	v := Context{}
 	v.jsContext = duktape.New()
-	v.scopes = []interface{}{map[string]interface{}{}}
+	v.scopes = []*scope{newScope()}
 	v.recycles = []func(){}
 	return &v
 }
@@ -76,12 +109,12 @@ func (C *Context) AddRecycle(fn func()) {
 
 func (C *Context) Begin() {
 	v := C.scopes[len(C.scopes)-1]
-	object := map[string]interface{}{}
-	dynamic.Each(v, func(key interface{}, value interface{}) bool {
-		dynamic.Set(object, dynamic.StringValue(key, ""), value)
+	s := newScope()
+	dynamic.Each(v.object, func(key interface{}, value interface{}) bool {
+		s.Set(dynamic.StringValue(key, ""), value)
 		return true
 	})
-	C.scopes = append(C.scopes, object)
+	C.scopes = append(C.scopes, s)
 }
 
 func (C *Context) End() {
@@ -91,36 +124,37 @@ func (C *Context) End() {
 func (C *Context) Get(keys []string) interface{} {
 
 	if keys == nil || len(keys) == 0 {
-		return C.scopes[len(C.scopes)-1]
+		return C.scopes[len(C.scopes)-1].object
 	}
 
 	key := keys[0]
 	i := len(C.scopes) - 1
 
-	var object interface{} = nil
+	var s *scope = nil
 
 	for i >= 0 {
 
-		object = C.scopes[i]
+		s = C.scopes[i]
 
-		if dynamic.Get(object, key) != nil {
+		if s.Has(key) {
 			break
 		}
 
 		i = i - 1
 	}
 
-	return dynamic.GetWithKeys(object, keys)
+	return dynamic.GetWithKeys(s.object, keys)
 }
 
 func (C *Context) SetGlobal(key string, value interface{}) {
-	object := C.scopes[0]
-	dynamic.Set(object, key, value)
+	s := C.scopes[0]
+	s.Set(key, value)
 }
 
 func (C *Context) Set(keys []string, value interface{}) {
-	object := C.scopes[len(C.scopes)-1]
-	dynamic.SetWithKeys(object, keys, value)
+	s := C.scopes[len(C.scopes)-1]
+	s.keys[keys[0]] = true
+	dynamic.SetWithKeys(s.object, keys, value)
 }
 
 func pushValue(jsContext *duktape.Context, value interface{}) {
@@ -400,7 +434,8 @@ func (C *Context) Evaluate(evaluateCode string, name string) interface{} {
 
 		if C.jsContext.Pcall(0) == duktape.ExecSuccess {
 
-			pushObject(C.jsContext, C.scopes[len(C.scopes)-1])
+			pushObject(C.jsContext, C.scopes[len(C.scopes)-1].object)
+
 			C.jsContext.PushString(evaluateCode)
 
 			if C.jsContext.Pcall(2) == duktape.ExecSuccess {

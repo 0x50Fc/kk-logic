@@ -54,10 +54,13 @@ func (L *AppLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 		output := ctx.Get(logic.OutputKeys)
 		ctx.Begin()
 		ctx.Set(logic.ParamsKeys, params)
-		ctx.Set(logic.ResultKeys, nil)
+		ctx.Set(logic.ResultKeys, logic.Nil)
 		ctx.Set(logic.OutputKeys, output)
 		err := L.app.Exec(ctx, "in")
 		v := ctx.Get(logic.ResultKeys)
+		if v == logic.Nil {
+			v = nil
+		}
 		ctx.End()
 
 		if err != nil {

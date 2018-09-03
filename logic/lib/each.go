@@ -11,6 +11,17 @@ type EachLogic struct {
 	logic.Logic
 }
 
+func setValue(v map[string]interface{}, key string, value interface{}) {
+	if key == "_" {
+		dynamic.Each(value, func(k interface{}, vv interface{}) bool {
+			v[dynamic.StringValue(k, "")] = vv
+			return true
+		})
+	} else if value != nil {
+		v[key] = value
+	}
+}
+
 func (L *EachLogic) item(ctx logic.IContext, app logic.IApp, object interface{}, fields interface{}) interface{} {
 
 	if fields == nil {
@@ -35,14 +46,15 @@ func (L *EachLogic) item(ctx logic.IContext, app logic.IApp, object interface{},
 					value = dynamic.Get(object, s)
 				}
 
-				v[skey] = value
+				setValue(v, skey, value)
+
 				return true
 			}
 		}
 
 		value = L.EvaluateValue(ctx, app, value, object)
 
-		v[skey] = value
+		setValue(v, skey, value)
 
 		return true
 	})

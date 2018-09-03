@@ -108,9 +108,12 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 		if ok {
 			ctx.Begin()
 			ctx.Set(ObjectKeys, object)
-			ctx.Set(ResultKeys, nil)
+			ctx.Set(ResultKeys, Nil)
 			s.Exec(ctx, app)
 			v := ctx.Get(ResultKeys)
+			if v == Nil {
+				v = nil
+			}
 			ctx.End()
 			return v
 		}
