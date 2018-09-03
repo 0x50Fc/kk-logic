@@ -9,34 +9,28 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func init() {
-	SetGlobalIgnoreKey("contentType")
-}
-
-type Swagger struct {
+type Ali struct {
 	scheme   string
 	host     string
 	basePath string
 }
 
-func NewSwagger(baseURL string) *Swagger {
+func NewAli(baseURL string) *Ali {
 
-	v := Swagger{}
+	v := Ali{}
 	u, _ := url.Parse(baseURL)
 	v.scheme = u.Scheme
 	v.host = u.Host
 	v.basePath = u.Path
 
-	if v.basePath != "/" {
-		if strings.HasSuffix(v.basePath, "/") {
-			v.basePath = v.basePath[0 : len(v.basePath)-1]
-		}
+	if strings.HasSuffix(v.basePath, "/") {
+		v.basePath = v.basePath[0 : len(v.basePath)-1]
 	}
 
 	return &v
 }
 
-func (S *Swagger) getType(stype string) string {
+func (S *Ali) getType(stype string) string {
 	switch stype {
 	case "int", "long", "integer":
 		return "integer"
@@ -50,18 +44,23 @@ func (S *Swagger) getType(stype string) string {
 	return "string"
 }
 
-func (S *Swagger) Object(store IStore) interface{} {
+func (S *Ali) Object(store IStore) interface{} {
+
+	basePath := S.basePath
+
+	if basePath == "" {
+		basePath = "/"
+	}
 
 	v := map[string]interface{}{
 		"swagger":  "2.0",
-		"host":     S.host,
-		"basePath": S.basePath,
+		"basePath": basePath,
 		"info": map[string]interface{}{
 			"title":   "kk-logic",
 			"version": "1.0",
 		},
 		"schemes": []interface{}{
-			S.scheme,
+			"https",
 		},
 	}
 
@@ -113,11 +112,26 @@ func (S *Swagger) Object(store IStore) interface{} {
 			consumes = append(produces, "multipart/form-data")
 		}
 
+		id := strings.Replace(strings.Replace(name, "/", "_", -1), ".", "_", -1)
+
 		object := map[string]interface{}{
-			"summary":    dynamic.StringValue(dynamic.Get(app.Object(), "title"), ""),
-			"produces":   produces,
-			"consumes":   consumes,
-			"parameters": parameters,
+			"x-aliyun-apigateway-paramater-handling": "MAPPING",
+			"x-aliyun-apigateway-auth-type":          "ANONYMOUS",
+			"x-aliyun-apigateway-backend": map[string]interface{}{
+				"type":    "HTTP",
+				"address": S.scheme + "://" + S.host,
+				"path":    S.basePath + name,
+				"method":  strings.ToLower(method),
+				"timeout": 10000,
+			},
+			"schemes": []interface{}{
+				"https",
+			},
+			"operationId": id,
+			"summary":     dynamic.StringValue(dynamic.Get(app.Object(), "title"), ""),
+			"produces":    produces,
+			"consumes":    consumes,
+			"parameters":  parameters,
 			"responses": map[string]interface{}{
 				"200": map[string]interface{}{
 					"description": "OK",
@@ -136,6 +150,6 @@ func (S *Swagger) Object(store IStore) interface{} {
 	return v
 }
 
-func (S *Swagger) Marshal(store IStore) ([]byte, error) {
+func (S *Ali) Marshal(store IStore) ([]byte, error) {
 	return yaml.Marshal(S.Object(store))
 }

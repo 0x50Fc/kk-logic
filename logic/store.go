@@ -14,7 +14,9 @@ import (
 )
 
 type IStore interface {
+	Dir() string
 	Get(path string) (IApp, error)
+	Walk(fn func(path string))
 }
 
 type storeApp struct {
@@ -36,6 +38,10 @@ func NewMemStore(dir string, expires time.Duration) *MemStore {
 	v.app = map[string]*storeApp{}
 	v.expires = expires
 	return &v
+}
+
+func (S *MemStore) Dir() string {
+	return S.dir
 }
 
 func (S *MemStore) Get(path string) (IApp, error) {
@@ -111,6 +117,19 @@ func (S *MemStore) Get(path string) (IApp, error) {
 	return app, nil
 }
 
+func (S *MemStore) Walk(fn func(path string)) {
+
+	filepath.Walk(S.dir, func(path string, info os.FileInfo, err error) error {
+
+		if strings.HasSuffix(path, ".yaml") {
+			p, _ := filepath.Rel(S.dir, path)
+			fn(p)
+		}
+
+		return nil
+	})
+}
+
 type FileStore struct {
 	dir string
 }
@@ -119,6 +138,10 @@ func NewFileStore(dir string) *FileStore {
 	v := FileStore{}
 	v.dir = dir
 	return &v
+}
+
+func (S *FileStore) Dir() string {
+	return S.dir
 }
 
 func (S *FileStore) Get(path string) (IApp, error) {
@@ -156,4 +179,17 @@ func (S *FileStore) Get(path string) (IApp, error) {
 	}
 
 	return NewApp(object, S, path), nil
+}
+
+func (S *FileStore) Walk(fn func(path string)) {
+
+	filepath.Walk(S.dir, func(path string, info os.FileInfo, err error) error {
+
+		if strings.HasSuffix(path, ".yaml") {
+			p, _ := filepath.Rel(S.dir, path)
+			fn(p)
+		}
+
+		return nil
+	})
 }

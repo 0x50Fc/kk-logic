@@ -2,6 +2,7 @@ package logic
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -11,7 +12,7 @@ import (
 
 func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http.ResponseWriter, req *http.Request) {
 
-	fs := http.FileServer(http.Dir("."))
+	fs := http.FileServer(http.Dir(store.Dir()))
 
 	return func(resp http.ResponseWriter, req *http.Request) {
 
@@ -189,7 +190,9 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 			}
 		} else if req.URL.Path == "/*.swagger" {
 
-			b, err := SWAGGER(store)
+			s := NewSwagger(fmt.Sprintf("http://%s/", req.Host))
+
+			b, err := s.Marshal(store)
 
 			if err != nil {
 				resp.WriteHeader(404)
@@ -198,7 +201,19 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 				resp.Header().Add("Content-Type", "text/yaml; charset=utf-8")
 				resp.Write(b)
 			}
+		} else if req.URL.Path == "/*.ali" {
 
+			s := NewAli(fmt.Sprintf("http://%s/", req.Host))
+
+			b, err := s.Marshal(store)
+
+			if err != nil {
+				resp.WriteHeader(404)
+				resp.Write([]byte(err.Error()))
+			} else {
+				resp.Header().Add("Content-Type", "text/yaml; charset=utf-8")
+				resp.Write(b)
+			}
 		} else {
 			fs.ServeHTTP(resp, req)
 		}

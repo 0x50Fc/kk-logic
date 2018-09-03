@@ -1,0 +1,138 @@
+swagger: '2.0'
+basePath: /
+info:
+  version: '0.9'
+  title: Aliyun Api Gateway Swagger Sample
+schemes:
+  - http
+  - https
+paths:
+  '/http/get/mapping/{userId}':
+    get:
+      operationId: case1
+      schemes:
+        - http
+        - https
+      x-aliyun-apigateway-paramater-handling: MAPPING
+      x-aliyun-apigateway-auth-type: ANONYMOUS
+      x-aliyun-apigateway-backend:
+        type: HTTP
+        address: 'http://www.aliyun.com'
+        path: '/builtin/echo/{userId}'
+        method: get
+        timeout: 10000
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          type: string
+        - name: swaggerQuery
+          in: query
+          required: false
+          default: '123465'
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+        - name: swaggerHeader
+          in: header
+          required: false
+          type: number
+          format: double
+          minimum: 0.1
+          maximum: 0.5
+          x-aliyun-apigateway-backend-location: query
+          x-aliyun-apigateway-backend-name: backendQuery
+      x-aliyun-apigateway-constant-parameters:
+        - backendName: swaggerConstant
+          value: swaggerConstant
+          location: header
+          description: description of swagger
+      x-aliyun-apigateway-system-parameters:
+        - systemName: CaAppId
+          backendName: appId
+          location: header
+      responses:
+        '200':
+          description: 200 description
+        '400':
+          description: 400 description
+  '/echo/test/post/{userId}':
+    post:
+      operationId: testpost
+      schemes:
+        - http
+        - https
+      x-aliyun-apigateway-paramater-handling: MAPPING
+      x-aliyun-apigateway-backend:
+        type: HTTP
+        address: 'http://www.aliyun.com'
+        path: '/builtin/echo/{backend}'
+        method: post
+        timeout: 10000
+      parameters:
+        - name: userId
+          in: path
+          type: string
+          x-aliyun-apigateway-backend-name: backend
+        - name: swaggerQuery1
+          in: query
+          required: false
+          default: '123465'
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+          x-aliyun-apigateway-enum: 1,2,3
+        - name: swaggerQuery2
+          in: query
+          required: false
+          type: string
+          x-aliyun-apigateway-backend-location: header
+          x-aliyun-apigateway-backend-name: backendHeader
+        - name: swaggerHeader
+          in: header
+          required: false
+          type: number
+          format: double
+          minimum: 0.1
+          maximum: 0.5
+          x-aliyun-apigateway-backend-location: query
+          x-aliyun-apigateway-backend-name: backendQuery
+        - name: swaggerFormdata
+          in: formData
+          required: true
+          type: string
+      responses:
+        '200':
+          description: 200 description
+        '400':
+          description: 400 description
+    x-aliyun-apigateway-any-method:
+      operationId: case2
+      schemes:
+        - http
+        - https
+      x-aliyun-apigateway-paramater-handling: MAPPING
+      x-aliyun-apigateway-backend:
+        type: HTTP
+        address: 'http://www.aliyun.com'
+        path: '/builtin/echo/{abc}'
+        method: post
+        timeout: 10000
+      parameters:
+        - name: userId
+          in: path
+          required: false
+          default: '123465'
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+          x-aliyun-apigateway-backend-name: abc
+          x-aliyun-apigateway-backend-location: path
+      responses:
+        '200':
+          description: 200 description
+        '400':
+          description: 400 description
