@@ -177,17 +177,6 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 
 		} else if strings.HasSuffix(req.URL.Path, ".yaml") || strings.HasSuffix(req.URL.Path, ".yml") {
 			resp.WriteHeader(404)
-		} else if req.URL.Path == "/*.raml" {
-
-			b, err := RAML(store)
-
-			if err != nil {
-				resp.WriteHeader(404)
-				resp.Write([]byte(err.Error()))
-			} else {
-				resp.Header().Add("Content-Type", "text/yaml; charset=utf-8")
-				resp.Write(b)
-			}
 		} else if req.URL.Path == "/*.swagger" {
 
 			s := NewSwagger(fmt.Sprintf("http://%s/", req.Host))
@@ -203,7 +192,7 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 			}
 		} else if req.URL.Path == "/*.ali" {
 
-			s := NewAli(fmt.Sprintf("http://%s/", req.Host))
+			s := NewAli(req.URL.Query().Get("vpc"))
 
 			b, err := s.Marshal(store)
 

@@ -2,7 +2,6 @@ package logic
 
 import (
 	"log"
-	"net/url"
 	"strings"
 
 	"github.com/hailongz/kk-lib/dynamic"
@@ -10,22 +9,13 @@ import (
 )
 
 type Ali struct {
-	scheme   string
-	host     string
-	basePath string
+	vpc string
 }
 
-func NewAli(baseURL string) *Ali {
+func NewAli(vpc string) *Ali {
 
 	v := Ali{}
-	u, _ := url.Parse(baseURL)
-	v.scheme = u.Scheme
-	v.host = u.Host
-	v.basePath = u.Path
-
-	if strings.HasSuffix(v.basePath, "/") {
-		v.basePath = v.basePath[0 : len(v.basePath)-1]
-	}
+	v.vpc = vpc
 
 	return &v
 }
@@ -44,17 +34,27 @@ func (S *Ali) getType(stype string) string {
 	return "string"
 }
 
-func (S *Ali) Object(store IStore) interface{} {
-
-	basePath := S.basePath
-
-	if basePath == "" {
-		basePath = "/"
+func (S *Ali) getFormat(stype string) string {
+	switch stype {
+	case "int", "integer":
+		return "int32"
+	case "long":
+		return "int64"
+	case "float", "double", "number":
+		return "number"
+	case "bool", "boolean":
+		return "boolean"
+	case "file":
+		return "file"
 	}
+	return "string"
+}
+
+func (S *Ali) Object(store IStore) interface{} {
 
 	v := map[string]interface{}{
 		"swagger":  "2.0",
-		"basePath": basePath,
+		"basePath": "/",
 		"info": map[string]interface{}{
 			"title":   "kk-logic",
 			"version": "1.0",
@@ -77,12 +77,20 @@ func (S *Ali) Object(store IStore) interface{} {
 			return
 		}
 
-		name := "/" + path[0:len(path)-4] + "json"
+		path = path[0 : len(path)-4]
+
+		name := "/" + path + "json"
 
 		input := dynamic.Get(app.Object(), "input")
 
 		contentType := dynamic.StringValue(dynamic.Get(app.Object(), "contentType"), "application/json")
 		method := dynamic.StringValue(dynamic.Get(input, "method"), "POST")
+
+		in := "query"
+
+		if method == "POST" {
+			in = "formData"
+		}
 
 		parameters := []interface{}{}
 
@@ -91,8 +99,9 @@ func (S *Ali) Object(store IStore) interface{} {
 			parameters = append(parameters, map[string]interface{}{
 				"name":        dynamic.StringValue(dynamic.Get(field, "name"), ""),
 				"description": dynamic.StringValue(dynamic.Get(field, "title"), ""),
-				"in":          "formData",
+				"in":          in,
 				"type":        S.getType(dynamic.StringValue(dynamic.Get(field, "type"), "string")),
+				"format":      S.getFormat(dynamic.StringValue(dynamic.Get(field, "type"), "string")),
 				"pattern":     dynamic.StringValue(dynamic.Get(field, "pattern"), ""),
 				"required":    dynamic.BooleanValue(dynamic.Get(field, "required"), false),
 			})
@@ -109,20 +118,20 @@ func (S *Ali) Object(store IStore) interface{} {
 		consumes := []interface{}{"application/x-www-form-urlencoded"}
 
 		if method == "POST" {
-			consumes = append(produces, "multipart/form-data")
+			consumes = append(consumes, "multipart/form-data")
 		}
 
-		id := strings.Replace(strings.Replace(name, "/", "_", -1), ".", "_", -1)
+		id := strings.Replace(strings.Replace(path, "/", "_", -1), ".", "_", -1) + "json"
 
 		object := map[string]interface{}{
 			"x-aliyun-apigateway-paramater-handling": "MAPPING",
 			"x-aliyun-apigateway-auth-type":          "ANONYMOUS",
 			"x-aliyun-apigateway-backend": map[string]interface{}{
-				"type":    "HTTP",
-				"address": S.scheme + "://" + S.host,
-				"path":    S.basePath + name,
-				"method":  strings.ToLower(method),
-				"timeout": 10000,
+				"type":          "HTTP-VPC",
+				"vpcAccessName": S.vpc,
+				"path":          name,
+				"method":        strings.ToLower(method),
+				"timeout":       10000,
 			},
 			"schemes": []interface{}{
 				"https",
