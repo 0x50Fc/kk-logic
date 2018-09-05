@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis"
 	"github.com/hailongz/kk-lib/dynamic"
 	"github.com/hailongz/kk-logic/logic"
+	"gopkg.in/redis.v5"
 )
 
 type Redis struct {
