@@ -147,8 +147,9 @@ func (C *Context) Get(keys []string) interface{} {
 }
 
 func (C *Context) SetGlobal(key string, value interface{}) {
-	s := C.scopes[0]
-	s.Set(key, value)
+	for _, s := range C.scopes {
+		s.Set(key, value)
+	}
 }
 
 func (C *Context) Set(keys []string, value interface{}) {
