@@ -2,10 +2,11 @@ package lib
 
 import (
 	"fmt"
-
+	"math"
 	"regexp"
 
 	"github.com/hailongz/kk-lib/dynamic"
+	"github.com/hailongz/kk-lib/json"
 	"github.com/hailongz/kk-logic/logic"
 )
 
@@ -34,6 +35,7 @@ func (L *InputLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	if err == nil {
 		dynamic.Each(dynamic.Get(input, "fields"), func(key interface{}, field interface{}) bool {
 
+			stype := dynamic.StringValue(dynamic.Get(field, "type"), "string")
 			name := dynamic.StringValue(dynamic.Get(field, "name"), "")
 			errno := int(dynamic.IntValue(dynamic.Get(field, "errno"), logic.ERROR_INPUT))
 			errmsg := dynamic.StringValue(dynamic.Get(field, "errmsg"), fmt.Sprintf("参数错误 %s", name))
@@ -57,6 +59,57 @@ func (L *InputLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 					err = logic.NewError(errno, errmsg)
 					return false
 				}
+			}
+
+			if v == nil {
+				return true
+			}
+
+			switch stype {
+			case "int", "int32":
+				{
+					vv := int(dynamic.IntValue(v, 0))
+					min := int(dynamic.IntValue(dynamic.Get(field, "minValue"), math.MinInt32))
+					max := int(dynamic.IntValue(dynamic.Get(field, "maxValue"), math.MaxInt32))
+					if vv < min || vv > max {
+						err = logic.NewError(errno, errmsg)
+						return false
+					}
+					dynamic.Set(inputData, name, vv)
+				}
+
+			case "long", "int64":
+				{
+					vv := (dynamic.IntValue(v, 0))
+					min := (dynamic.IntValue(dynamic.Get(field, "minValue"), math.MinInt64))
+					max := (dynamic.IntValue(dynamic.Get(field, "maxValue"), math.MaxInt64))
+					if vv < min || vv > max {
+						err = logic.NewError(errno, errmsg)
+						return false
+					}
+					dynamic.Set(inputData, name, vv)
+				}
+
+			case "bool", "boolean":
+				dynamic.Set(inputData, name, dynamic.BooleanValue(v, false))
+			case "float", "double", "number":
+				{
+					vv := (dynamic.FloatValue(v, 0))
+					min := (dynamic.FloatValue(dynamic.Get(field, "minValue"), math.MinInt64))
+					max := (dynamic.FloatValue(dynamic.Get(field, "maxValue"), math.MaxInt64))
+					if vv < min || vv > max {
+						err = logic.NewError(errno, errmsg)
+						return false
+					}
+					dynamic.Set(inputData, name, vv)
+				}
+			case "json":
+				var vv interface{} = nil
+				err = json.Unmarshal([]byte(dynamic.StringValue(v, "")), &v)
+				if err != nil {
+					return false
+				}
+				dynamic.Set(inputData, name, vv)
 			}
 
 			return true
