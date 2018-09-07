@@ -1,4 +1,4 @@
-package http
+package redis
 
 import (
 	"encoding/json"

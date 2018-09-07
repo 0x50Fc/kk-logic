@@ -12,6 +12,7 @@ import (
 	_ "github.com/hailongz/kk-logic/logic/captcha"
 	_ "github.com/hailongz/kk-logic/logic/http"
 	_ "github.com/hailongz/kk-logic/logic/lib"
+	_ "github.com/hailongz/kk-logic/logic/oss"
 	_ "github.com/hailongz/kk-logic/logic/redis"
 )
 

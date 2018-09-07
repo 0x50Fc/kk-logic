@@ -27,7 +27,7 @@ func (S *Ali) getType(stype string) string {
 	case "float", "double", "number":
 		return "number"
 	case "bool", "boolean":
-		return "boolean"
+		return "string"
 	case "file":
 		return "file"
 	}
@@ -43,7 +43,7 @@ func (S *Ali) getFormat(stype string) string {
 	case "float", "double", "number":
 		return "number"
 	case "bool", "boolean":
-		return "boolean"
+		return "Boolean"
 	case "file":
 		return "file"
 	}
@@ -121,7 +121,7 @@ func (S *Ali) Object(store IStore) interface{} {
 			consumes = append(consumes, "multipart/form-data")
 		}
 
-		id := strings.Replace(strings.Replace(path, "/", "_", -1), ".", "_", -1) + "json"
+		id := strings.Replace(strings.Replace(strings.Replace(path, "/", "_", -1), ".", "_", -1), "-", "_", -1) + "json"
 
 		object := map[string]interface{}{
 			"x-aliyun-apigateway-paramater-handling": "MAPPING",

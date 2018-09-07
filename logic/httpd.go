@@ -136,6 +136,34 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 				err = app.Exec(ctx, "in")
 
 				if err != nil {
+
+					{
+						r, ok := err.(*Redirect)
+
+						if ok {
+							resp.Header().Set("Location", r.URL)
+							resp.WriteHeader(302)
+							return
+						}
+					}
+
+					{
+						r, ok := err.(*Content)
+
+						if ok {
+
+							for key, vs := range r.Header {
+								resp.Header()[key] = vs
+							}
+
+							resp.Header().Set("Content-Type", r.ContentType)
+
+							resp.Write(r.Content)
+
+							return
+						}
+					}
+
 					b, _ := json.Marshal(GetErrorObject(err))
 					resp.Header().Set("Content-Type", "application/json; charset=utf-8")
 					resp.Write(b)
