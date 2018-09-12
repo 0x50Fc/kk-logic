@@ -105,7 +105,7 @@ func (L *InputLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 				}
 			case "json":
 				var vv interface{} = nil
-				err = json.Unmarshal([]byte(dynamic.StringValue(v, "")), &v)
+				err = json.Unmarshal([]byte(dynamic.StringValue(v, "")), &vv)
 				if err != nil {
 					return false
 				}
