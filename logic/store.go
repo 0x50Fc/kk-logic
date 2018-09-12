@@ -29,7 +29,7 @@ type MemStore struct {
 	dir     string
 	app     map[string]*storeApp
 	expires time.Duration
-	lock    sync.Mutex
+	lock    sync.RWMutex
 }
 
 func NewMemStore(dir string, expires time.Duration) *MemStore {
@@ -48,11 +48,11 @@ func (S *MemStore) Get(path string) (IApp, error) {
 
 	atime := time.Now()
 
-	S.lock.Lock()
+	S.lock.RLock()
 
 	v, ok := S.app[path]
 
-	S.lock.Unlock()
+	S.lock.RUnlock()
 
 	if ok && atime.Before(v.endTime) {
 		return v.app, nil
