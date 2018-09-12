@@ -41,11 +41,13 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 							if err != nil {
 								json.Unmarshal(b, &inputData)
 							}
+							req.Body.Close()
 						} else if strings.Contains(ctype, "text/xml") || strings.Contains(ctype, "text/plain") {
 							b, err := ioutil.ReadAll(req.Body)
 							if err != nil {
 								ctx.Set(ContentKeys, string(b))
 							}
+							req.Body.Close()
 						} else if strings.Contains(ctype, "multipart/form-data") {
 							inputData = map[string]interface{}{}
 							req.ParseMultipartForm(maxMemory)
