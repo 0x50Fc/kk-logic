@@ -287,7 +287,7 @@ func pushContext(jsContext *duktape.Context, ctx *ContextScope) {
 			keys := []string{}
 
 			if jsContext.IsArray(-top) {
-				jsContext.Enum(-1, duktape.EnumArrayIndicesOnly)
+				jsContext.Enum(-top, duktape.DUK_ENUM_ARRAY_INDICES_ONLY)
 				for jsContext.Next(-1, true) {
 					keys = append(keys, dynamic.StringValue(toValue(jsContext, -1), ""))
 					jsContext.Pop2()
@@ -296,6 +296,8 @@ func pushContext(jsContext *duktape.Context, ctx *ContextScope) {
 			} else if jsContext.IsString(-top) {
 				keys = append(keys, jsContext.ToString(-top))
 			}
+
+			log.Println(keys)
 
 			v := ctx.Get(keys)
 
@@ -318,7 +320,7 @@ func pushContext(jsContext *duktape.Context, ctx *ContextScope) {
 			keys := []string{}
 
 			if jsContext.IsArray(-top) {
-				jsContext.Enum(-top, duktape.EnumArrayIndicesOnly)
+				jsContext.Enum(-top, duktape.DUK_ENUM_ARRAY_INDICES_ONLY)
 				for jsContext.Next(-1, true) {
 					keys = append(keys, dynamic.StringValue(toValue(jsContext, -1), ""))
 					jsContext.Pop2()
@@ -358,7 +360,7 @@ func toValue(jsContext *duktape.Context, idx int) interface{} {
 		return jsContext.ToString(idx)
 	} else if jsContext.IsArray(idx) {
 		v := []interface{}{}
-		jsContext.Enum(idx, duktape.EnumArrayIndicesOnly)
+		jsContext.Enum(idx, duktape.DUK_ENUM_ARRAY_INDICES_ONLY)
 		for jsContext.Next(-1, true) {
 			vv := toValue(jsContext, -1)
 			if vv != nil {
@@ -372,7 +374,7 @@ func toValue(jsContext *duktape.Context, idx int) interface{} {
 
 		v := map[string]interface{}{}
 
-		jsContext.Enum(idx, duktape.EnumIncludeInternal)
+		jsContext.Enum(idx, duktape.DUK_ENUM_INCLUDE_SYMBOLS)
 
 		for jsContext.Next(-1, true) {
 			key := toValue(jsContext, -2)
