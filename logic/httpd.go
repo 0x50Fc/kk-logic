@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"runtime"
 	"strings"
 
 	"github.com/hailongz/kk-lib/dynamic"
@@ -15,6 +17,8 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 	fs := http.FileServer(http.Dir(store.Dir()))
 
 	return func(resp http.ResponseWriter, req *http.Request) {
+
+		defer log.Println("[HTTP] [DONE]")
 
 		if strings.HasSuffix(req.URL.Path, ".json") {
 
@@ -198,9 +202,7 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 					return
 				}
 
-			}
-
-			if err != nil {
+			} else {
 				resp.WriteHeader(404)
 				resp.Write([]byte(err.Error()))
 			}
@@ -233,6 +235,9 @@ func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http
 				resp.Header().Add("Content-Type", "text/yaml; charset=utf-8")
 				resp.Write(b)
 			}
+		} else if req.URL.Path == "/_gc" {
+			log.Println("[GC]")
+			runtime.GC()
 		} else {
 			fs.ServeHTTP(resp, req)
 		}

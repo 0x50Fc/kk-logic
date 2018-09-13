@@ -3,6 +3,7 @@ package redis
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/hailongz/kk-lib/dynamic"
@@ -17,41 +18,50 @@ type Redis struct {
 
 type RedisOpenLogic struct {
 	logic.Logic
+	redis *Redis
+}
+
+func (L *RedisOpenLogic) Recycle() {
+	if L.redis != nil {
+		L.redis.client.Close()
+	}
 }
 
 func (L *RedisOpenLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 
 	L.Logic.Exec(ctx, app)
 
-	prefix := dynamic.StringValue(L.Get(ctx, app, "prefix"), "")
 	name := dynamic.StringValue(L.Get(ctx, app, "name"), "redis")
-	addr := dynamic.StringValue(L.Get(ctx, app, "addr"), "127.0.0.1:6379")
-	pwd := dynamic.StringValue(L.Get(ctx, app, "password"), "")
-	db := dynamic.IntValue(L.Get(ctx, app, "db"), 0)
 
-	v := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: pwd,     // no password set
-		DB:       int(db), // use default DB
-	})
+	if L.redis == nil {
 
-	_, err := v.Ping().Result()
+		log.Println("[REDIS] [OPEN]")
+		prefix := dynamic.StringValue(L.Get(ctx, app, "prefix"), "")
+		addr := dynamic.StringValue(L.Get(ctx, app, "addr"), "127.0.0.1:6379")
+		pwd := dynamic.StringValue(L.Get(ctx, app, "password"), "")
+		db := dynamic.IntValue(L.Get(ctx, app, "db"), 0)
 
-	if err != nil {
-		if L.Has("error") {
-			ctx.Set(logic.ErrorKeys, logic.GetErrorObject(err))
-			return L.Done(ctx, app, "error")
+		v := redis.NewClient(&redis.Options{
+			Addr:     addr,
+			Password: pwd,     // no password set
+			DB:       int(db), // use default DB
+		})
+
+		_, err := v.Ping().Result()
+
+		if err != nil {
+			if L.Has("error") {
+				ctx.Set(logic.ErrorKeys, logic.GetErrorObject(err))
+				return L.Done(ctx, app, "error")
+			}
+			return err
 		}
-		return err
+
+		L.redis = &Redis{v, prefix}
+
 	}
 
-	r := Redis{v, prefix}
-
-	ctx.SetGlobal(name, &r)
-
-	ctx.AddRecycle(func() {
-		v.Close()
-	})
+	ctx.SetGlobal(name, L.redis)
 
 	return L.Done(ctx, app, "done")
 }

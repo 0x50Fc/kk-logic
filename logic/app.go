@@ -14,6 +14,7 @@ type IApp interface {
 	Object() interface{}
 	Exec(ctx IContext, name string) error
 	Each(fn func(name string, logic ILogic) bool)
+	Recycle()
 }
 
 type App struct {
@@ -115,6 +116,19 @@ func (A *App) Each(fn func(name string, logic ILogic) bool) {
 				if !fn(name, vv) {
 					break
 				}
+			}
+		}
+	}
+
+}
+
+func (A *App) Recycle() {
+
+	for _, v := range A.logics {
+		{
+			vv, ok := v.(ILogic)
+			if ok {
+				vv.Recycle()
 			}
 		}
 	}

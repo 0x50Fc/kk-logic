@@ -105,14 +105,18 @@ func (S *MemStore) Get(path string) (IApp, error) {
 
 	app := NewApp(object, S, path)
 
-	v = &storeApp{}
-	v.app = app
-	v.modTime = st.ModTime()
-	v.endTime = atime.Add(S.expires)
+	vv := &storeApp{}
+	vv.app = app
+	vv.modTime = st.ModTime()
+	vv.endTime = atime.Add(S.expires)
 
 	S.lock.Lock()
-	S.app[path] = v
+	S.app[path] = vv
 	S.lock.Unlock()
+
+	if v != nil {
+		v.app.Recycle()
+	}
 
 	return app, nil
 }

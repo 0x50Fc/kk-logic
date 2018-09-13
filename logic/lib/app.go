@@ -80,3 +80,9 @@ func (L *AppLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 
 	return L.Done(ctx, app, "done")
 }
+
+func (L *AppLogic) Recycle() {
+	if L.app != nil {
+		L.app.Recycle()
+	}
+}

@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/hailongz/kk-lib/duktape"
 	"github.com/hailongz/kk-lib/dynamic"
-	"gopkg.in/olebedev/go-duktape.v3"
 )
 
 var InputKeys = []string{"input"}
@@ -89,39 +89,11 @@ func (s *scope) Has(key string) bool {
 	return s.keys[key]
 }
 
-type Context struct {
-	jsContext *duktape.Context
-	scopes    []*scope
-	recycles  []func()
+type ContextScope struct {
+	scopes []*scope
 }
 
-func NewContext() IContext {
-	v := Context{}
-	v.jsContext = duktape.New()
-	v.scopes = []*scope{newScope()}
-	v.recycles = []func(){}
-	return &v
-}
-
-func (C *Context) AddRecycle(fn func()) {
-	C.recycles = append(C.recycles, fn)
-}
-
-func (C *Context) Begin() {
-	v := C.scopes[len(C.scopes)-1]
-	s := newScope()
-	dynamic.Each(v.object, func(key interface{}, value interface{}) bool {
-		s.Set(dynamic.StringValue(key, ""), value)
-		return true
-	})
-	C.scopes = append(C.scopes, s)
-}
-
-func (C *Context) End() {
-	C.scopes = C.scopes[0 : len(C.scopes)-1]
-}
-
-func (C *Context) Get(keys []string) interface{} {
+func (C *ContextScope) Get(keys []string) interface{} {
 
 	if keys == nil || len(keys) == 0 {
 		return C.scopes[len(C.scopes)-1].object
@@ -146,16 +118,84 @@ func (C *Context) Get(keys []string) interface{} {
 	return dynamic.GetWithKeys(s.object, keys)
 }
 
-func (C *Context) SetGlobal(key string, value interface{}) {
+func (C *ContextScope) SetGlobal(key string, value interface{}) {
 	for _, s := range C.scopes {
 		s.Set(key, value)
 	}
 }
 
-func (C *Context) Set(keys []string, value interface{}) {
+func (C *ContextScope) Set(keys []string, value interface{}) {
 	s := C.scopes[len(C.scopes)-1]
 	s.keys[keys[0]] = true
 	dynamic.SetWithKeys(s.object, keys, value)
+}
+
+func (C *ContextScope) Begin() {
+	v := C.scopes[len(C.scopes)-1]
+	s := newScope()
+	dynamic.Each(v.object, func(key interface{}, value interface{}) bool {
+		s.Set(dynamic.StringValue(key, ""), value)
+		return true
+	})
+	C.scopes = append(C.scopes, s)
+}
+
+func (C *ContextScope) End() {
+	C.scopes = C.scopes[0 : len(C.scopes)-1]
+}
+
+func (C *ContextScope) Object() interface{} {
+	return C.scopes[len(C.scopes)-1].object
+}
+
+func NewContextScope() *ContextScope {
+	v := ContextScope{}
+	v.scopes = []*scope{newScope()}
+	return &v
+}
+
+type Context struct {
+	scope     *ContextScope
+	jsContext *duktape.Context
+	recycles  []func()
+}
+
+func NewContext() IContext {
+	v := Context{}
+	v.scope = NewContextScope()
+	v.jsContext = duktape.New()
+	v.recycles = []func(){}
+
+	v.jsContext.PushGlobalObject()
+	pushContext(v.jsContext, v.scope)
+	v.jsContext.PutPropString(-2, "ctx")
+	v.jsContext.Pop()
+
+	return &v
+}
+
+func (C *Context) Get(keys []string) interface{} {
+	return C.scope.Get(keys)
+}
+
+func (C *Context) SetGlobal(key string, value interface{}) {
+	C.scope.SetGlobal(key, value)
+}
+
+func (C *Context) Set(keys []string, value interface{}) {
+	C.scope.Set(keys, value)
+}
+
+func (C *Context) Begin() {
+	C.scope.Begin()
+}
+
+func (C *Context) End() {
+	C.scope.End()
+}
+
+func (C *Context) AddRecycle(fn func()) {
+	C.recycles = append(C.recycles, fn)
 }
 
 func pushValue(jsContext *duktape.Context, value interface{}) {
@@ -221,7 +261,7 @@ func pushObject(jsContext *duktape.Context, object interface{}) {
 
 		jsContext.PushString(dynamic.StringValue(key, ""))
 
-		jsContext.PushGoFunction(func(jsContext *duktape.Context) int {
+		jsContext.PushGoFunction(func() int {
 			pushValue(jsContext, value)
 			return 1
 		})
@@ -233,12 +273,12 @@ func pushObject(jsContext *duktape.Context, object interface{}) {
 
 }
 
-func pushContext(jsContext *duktape.Context, ctx IContext) {
+func pushContext(jsContext *duktape.Context, ctx *ContextScope) {
 
 	jsContext.PushObject()
 
 	jsContext.PushString("get")
-	jsContext.PushGoFunction(func(jsContext *duktape.Context) int {
+	jsContext.PushGoFunction(func() int {
 
 		top := jsContext.GetTop()
 
@@ -269,7 +309,7 @@ func pushContext(jsContext *duktape.Context, ctx IContext) {
 	jsContext.PutProp(-3)
 
 	jsContext.PushString("set")
-	jsContext.PushGoFunction(func(jsContext *duktape.Context) int {
+	jsContext.PushGoFunction(func() int {
 
 		top := jsContext.GetTop()
 
@@ -278,7 +318,7 @@ func pushContext(jsContext *duktape.Context, ctx IContext) {
 			keys := []string{}
 
 			if jsContext.IsArray(-top) {
-				jsContext.Enum(-1, duktape.EnumArrayIndicesOnly)
+				jsContext.Enum(-top, duktape.EnumArrayIndicesOnly)
 				for jsContext.Next(-1, true) {
 					keys = append(keys, dynamic.StringValue(toValue(jsContext, -1), ""))
 					jsContext.Pop2()
@@ -382,8 +422,10 @@ func (C *Context) Call(evaluateCode string, name string, done func(name string))
 
 	var err error = nil
 
+	jsContext := C.jsContext
+
 	C.jsContext.PushString(name)
-	C.jsContext.CompileStringFilename(0, fmt.Sprintf("(function(ctx,done){ %s })", evaluateCode))
+	C.jsContext.CompileStringFilename(0, fmt.Sprintf("(function(done){ %s })", evaluateCode))
 
 	if C.jsContext.IsFunction(-1) {
 
@@ -391,9 +433,8 @@ func (C *Context) Call(evaluateCode string, name string, done func(name string))
 
 			if C.jsContext.IsFunction(-1) {
 
-				pushContext(C.jsContext, C)
+				C.jsContext.PushGoFunction(func() int {
 
-				C.jsContext.PushGoFunction(func(jsContext *duktape.Context) int {
 					top := jsContext.GetTop()
 
 					if top > 0 && jsContext.IsString(-top) {
@@ -403,7 +444,7 @@ func (C *Context) Call(evaluateCode string, name string, done func(name string))
 					return 0
 				})
 
-				if C.jsContext.Pcall(2) == duktape.ExecSuccess {
+				if C.jsContext.Pcall(1) == duktape.ExecSuccess {
 
 				} else {
 					dumpError(C.jsContext, "[CONTEXT] [CALL]", -1)
@@ -435,7 +476,7 @@ func (C *Context) Evaluate(evaluateCode string, name string) interface{} {
 
 		if C.jsContext.Pcall(0) == duktape.ExecSuccess {
 
-			pushObject(C.jsContext, C.scopes[len(C.scopes)-1].object)
+			pushObject(C.jsContext, C.scope.Object())
 
 			C.jsContext.PushString(evaluateCode)
 
@@ -457,15 +498,14 @@ func (C *Context) Evaluate(evaluateCode string, name string) interface{} {
 }
 
 func (C *Context) Recycle() {
-	C.jsContext.DestroyHeap()
-	C.jsContext.Destroy()
-	C.jsContext = nil
-	C.scopes = nil
 	if C.recycles != nil {
 		for _, fn := range C.recycles {
 			fn()
 		}
 		C.recycles = nil
 	}
-	log.Println("[CONTEXT] [Recycle]")
+	C.jsContext.Recycle()
+	C.jsContext = nil
+	C.scope = nil
+	log.Println("[CONTEXT] [DONE]")
 }

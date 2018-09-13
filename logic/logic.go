@@ -21,6 +21,7 @@ type ILogic interface {
 	Done(ctx IContext, app IApp, name string) error
 	Error(ctx IContext, app IApp, err error) error
 	Has(name string) bool
+	Recycle()
 }
 
 type Logic struct {
@@ -235,5 +236,16 @@ func (L *Logic) Done(ctx IContext, app IApp, name string) error {
 	}
 
 	return nil
+
+}
+
+func (L *Logic) Recycle() {
+
+	for _, v := range L.on {
+		vv, ok := v.(ILogic)
+		if ok {
+			vv.Recycle()
+		}
+	}
 
 }
