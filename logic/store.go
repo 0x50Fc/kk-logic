@@ -17,6 +17,7 @@ type IStore interface {
 	Dir() string
 	Get(path string) (IApp, error)
 	Walk(fn func(path string))
+	Recycle()
 }
 
 type storeApp struct {
@@ -38,6 +39,14 @@ func NewMemStore(dir string, expires time.Duration) *MemStore {
 	v.app = map[string]*storeApp{}
 	v.expires = expires
 	return &v
+}
+
+func (S *MemStore) Recycle() {
+	S.lock.Lock()
+	defer S.lock.Unlock()
+	for _, a := range S.app {
+		a.app.Recycle()
+	}
 }
 
 func (S *MemStore) Dir() string {
