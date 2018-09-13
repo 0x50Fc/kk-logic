@@ -458,6 +458,7 @@ func (C *Context) Evaluate(evaluateCode string, name string) interface{} {
 
 func (C *Context) Recycle() {
 	C.jsContext.DestroyHeap()
+	C.jsContext.Destroy()
 	C.jsContext = nil
 	C.scopes = nil
 	if C.recycles != nil {
@@ -466,4 +467,5 @@ func (C *Context) Recycle() {
 		}
 		C.recycles = nil
 	}
+	log.Println("[CONTEXT] [Recycle]")
 }

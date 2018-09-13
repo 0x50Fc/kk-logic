@@ -21,7 +21,6 @@ func main() {
 	prefix := "/"
 	dir := "."
 	port := 8080
-	cached := true
 	sessionKey := "kk"
 	sessionMaxAge := 1800
 	maxMemory := int64(4096000)
@@ -42,13 +41,6 @@ func main() {
 				i += 2
 				continue
 
-			} else if v == "-d" {
-
-				cached = false
-
-				i += 1
-
-				continue
 			} else if v == "-r" && i+1 < n {
 
 				dir = os.Args[i+1]
@@ -90,18 +82,11 @@ func main() {
 
 	}
 
-	var store logic.IStore = nil
-
-	if cached {
-		store = logic.NewMemStore(dir, 6*time.Second)
-	} else {
-		store = logic.NewFileStore(dir)
-	}
+	var store logic.IStore = logic.NewMemStore(dir, 6*time.Second)
 
 	session := logic.NewSession(sessionKey, sessionMaxAge)
 
 	log.Println("PORT: ", port)
-	log.Println("CACHED: ", cached)
 	log.Println("ROOT: ", dir)
 	log.Println("PREFIX: ", prefix)
 	log.Println("maxMemory: ", maxMemory)

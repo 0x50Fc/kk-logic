@@ -3,7 +3,7 @@ title: 首页接口
 
 in:
   $class: kk.Logic.App
-  path: ../auth.js
+  path: ../auth.yaml
   ondone:
     $class: kk.Logic.Var
     key: output.version
