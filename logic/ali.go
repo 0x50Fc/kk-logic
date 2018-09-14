@@ -92,19 +92,27 @@ func (S *Ali) Object(store IStore) interface{} {
 			in = "formData"
 		}
 
+		handling := "MAPPING"
+
 		parameters := []interface{}{}
 
 		dynamic.Each(dynamic.Get(input, "fields"), func(key interface{}, field interface{}) bool {
+
+			stype := dynamic.StringValue(dynamic.Get(field, "type"), "string")
 
 			parameters = append(parameters, map[string]interface{}{
 				"name":        dynamic.StringValue(dynamic.Get(field, "name"), ""),
 				"description": dynamic.StringValue(dynamic.Get(field, "title"), ""),
 				"in":          in,
-				"type":        S.getType(dynamic.StringValue(dynamic.Get(field, "type"), "string")),
-				"format":      S.getFormat(dynamic.StringValue(dynamic.Get(field, "type"), "string")),
+				"type":        S.getType(stype),
+				"format":      S.getFormat(stype),
 				"pattern":     dynamic.StringValue(dynamic.Get(field, "pattern"), ""),
 				"required":    dynamic.BooleanValue(dynamic.Get(field, "required"), false),
 			})
+
+			if stype == "file" {
+				handling = "PASSTHROUGH"
+			}
 
 			return true
 		})
@@ -121,10 +129,14 @@ func (S *Ali) Object(store IStore) interface{} {
 			consumes = append(consumes, "multipart/form-data")
 		}
 
+		if handling == "PASSTHROUGH" {
+			parameters = parameters[0:0]
+		}
+
 		id := strings.Replace(strings.Replace(strings.Replace(path, "/", "_", -1), ".", "_", -1), "-", "_", -1) + "json"
 
 		object := map[string]interface{}{
-			"x-aliyun-apigateway-paramater-handling": "MAPPING",
+			"x-aliyun-apigateway-paramater-handling": handling,
 			"x-aliyun-apigateway-auth-type":          "ANONYMOUS",
 			"x-aliyun-apigateway-backend": map[string]interface{}{
 				"type":          "HTTP-VPC",

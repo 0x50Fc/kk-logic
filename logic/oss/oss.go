@@ -186,8 +186,10 @@ func (L *OSSURLLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 
 	L.Logic.Exec(ctx, app)
 
+	method := dynamic.StringValue(L.Get(ctx, app, "method"), "GET")
 	path := dynamic.StringValue(L.Get(ctx, app, "path"), "")
 	expires := dynamic.IntValue(L.Get(ctx, app, "expires"), 300)
+	contentType := dynamic.StringValue(L.Get(ctx, app, "contentType"), "")
 
 	endpoint := dynamic.StringValue(L.Get(ctx, app, "endpoint"), "")
 	accessKey := dynamic.StringValue(L.Get(ctx, app, "accessKey"), "")
@@ -206,7 +208,27 @@ func (L *OSSURLLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 		return L.Error(ctx, app, err)
 	}
 
-	u, err := buk.SignURL(path, "GET", expires)
+	m := oss.HTTPGet
+
+	switch method {
+	case "POST":
+		m = oss.HTTPPost
+		break
+	case "PUT":
+		m = oss.HTTPPut
+		break
+	case "DELETE":
+		m = oss.HTTPDelete
+		break
+	}
+
+	options := []oss.Option{}
+
+	if contentType != "" {
+		options = append(options, oss.ContentType(contentType))
+	}
+
+	u, err := buk.SignURL(path, m, expires, options...)
 
 	if err != nil {
 		return L.Error(ctx, app, err)
