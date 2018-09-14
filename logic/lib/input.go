@@ -8,6 +8,7 @@ import (
 	"github.com/hailongz/kk-lib/dynamic"
 	"github.com/hailongz/kk-lib/json"
 	"github.com/hailongz/kk-logic/logic"
+	"gopkg.in/yaml.v2"
 )
 
 /**
@@ -106,6 +107,13 @@ func (L *InputLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 			case "json":
 				var vv interface{} = nil
 				err = json.Unmarshal([]byte(dynamic.StringValue(v, "")), &vv)
+				if err != nil {
+					return false
+				}
+				dynamic.Set(inputData, name, vv)
+			case "yaml":
+				var vv interface{} = nil
+				err = yaml.Unmarshal([]byte(dynamic.StringValue(v, "")), &vv)
 				if err != nil {
 					return false
 				}

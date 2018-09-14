@@ -1,7 +1,6 @@
 package logic
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hailongz/kk-lib/dynamic"
+	"github.com/hailongz/kk-lib/json"
 )
 
 func HandlerFunc(store IStore, session ISession, maxMemory int64) func(resp http.ResponseWriter, req *http.Request) {

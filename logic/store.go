@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-yaml/yaml"
+	"gopkg.in/yaml.v2"
 )
 
 type IStore interface {
