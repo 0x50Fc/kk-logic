@@ -3,6 +3,7 @@ package lib
 import (
 	"fmt"
 	"math"
+	"mime/multipart"
 	"regexp"
 
 	"github.com/hailongz/kk-lib/dynamic"
@@ -118,6 +119,12 @@ func (L *InputLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 					return false
 				}
 				dynamic.Set(inputData, name, vv)
+			case "file":
+				_, ok := v.(*multipart.FileHeader)
+				if !ok {
+					err = logic.NewError(errno, errmsg)
+					return false
+				}
 			}
 
 			return true

@@ -6,6 +6,7 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/hailongz/kk-lib/duktape"
 	"github.com/hailongz/kk-lib/dynamic"
@@ -32,19 +33,6 @@ var MethodKeys = []string{"method"}
 type _Nil struct{}
 
 var Nil = &_Nil{}
-
-const (
-	DUK_DEFPROP_WRITABLE          = (1 << 0)
-	DUK_DEFPROP_ENUMERABLE        = (1 << 1)
-	DUK_DEFPROP_CONFIGURABLE      = (1 << 2)
-	DUK_DEFPROP_HAVE_WRITABLE     = (1 << 3)
-	DUK_DEFPROP_HAVE_ENUMERABLE   = (1 << 4)
-	DUK_DEFPROP_HAVE_CONFIGURABLE = (1 << 5)
-	DUK_DEFPROP_HAVE_VALUE        = (1 << 6)
-	DUK_DEFPROP_HAVE_GETTER       = (1 << 7)
-	DUK_DEFPROP_HAVE_SETTER       = (1 << 8)
-	DUK_DEFPROP_FORCE             = (1 << 9)
-)
 
 type Function int64
 
@@ -255,18 +243,24 @@ func pushValue(jsContext *duktape.Context, value interface{}) {
 
 func pushObject(jsContext *duktape.Context, object interface{}) {
 
-	jsContext.PushObject()
+	jsContext.PushGoObject(object)
 
 	dynamic.Each(object, func(key interface{}, value interface{}) bool {
 
-		jsContext.PushString(dynamic.StringValue(key, ""))
+		skey := dynamic.StringValue(key, "")
+
+		if strings.HasPrefix(skey, "_") {
+			return true
+		}
+
+		jsContext.PushString(skey)
 
 		jsContext.PushGoFunction(func() int {
 			pushValue(jsContext, value)
 			return 1
 		})
 
-		jsContext.DefProp(-3, uint(DUK_DEFPROP_HAVE_GETTER|DUK_DEFPROP_HAVE_ENUMERABLE|DUK_DEFPROP_ENUMERABLE))
+		jsContext.DefProp(-3, uint(duktape.DUK_DEFPROP_HAVE_GETTER|duktape.DUK_DEFPROP_HAVE_ENUMERABLE|duktape.DUK_DEFPROP_ENUMERABLE))
 
 		return true
 	})
@@ -371,6 +365,14 @@ func toValue(jsContext *duktape.Context, idx int) interface{} {
 		jsContext.Pop()
 		return v
 	} else if jsContext.IsObject(idx) {
+
+		{
+			v := jsContext.ToGoObject(idx)
+
+			if v != nil {
+				return v
+			}
+		}
 
 		v := map[string]interface{}{}
 

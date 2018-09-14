@@ -25,11 +25,11 @@ func (L *OSSGetLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	path := dynamic.StringValue(L.Get(ctx, app, "path"), "")
 
 	endpoint := dynamic.StringValue(L.Get(ctx, app, "endpoint"), "")
-	accessKeyId := dynamic.StringValue(L.Get(ctx, app, "accessKeyId"), "")
-	accessKeySecret := dynamic.StringValue(L.Get(ctx, app, "accessKeySecret"), "")
+	accessKey := dynamic.StringValue(L.Get(ctx, app, "accessKey"), "")
+	secretKey := dynamic.StringValue(L.Get(ctx, app, "secretKey"), "")
 	bucket := dynamic.StringValue(L.Get(ctx, app, "bucket"), "")
 
-	client, err := oss.New(endpoint, accessKeyId, accessKeySecret)
+	client, err := oss.New(endpoint, accessKey, secretKey)
 
 	if err != nil {
 		return L.Error(ctx, app, err)
@@ -82,11 +82,11 @@ func (L *OSSPutLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 		path := dynamic.StringValue(L.Get(ctx, app, "path"), "")
 
 		endpoint := dynamic.StringValue(L.Get(ctx, app, "endpoint"), "")
-		accessKeyId := dynamic.StringValue(L.Get(ctx, app, "accessKeyId"), "")
-		accessKeySecret := dynamic.StringValue(L.Get(ctx, app, "accessKeySecret"), "")
+		accessKey := dynamic.StringValue(L.Get(ctx, app, "accessKey"), "")
+		secretKey := dynamic.StringValue(L.Get(ctx, app, "secretKey"), "")
 		bucket := dynamic.StringValue(L.Get(ctx, app, "bucket"), "")
 
-		client, err := oss.New(endpoint, accessKeyId, accessKeySecret)
+		client, err := oss.New(endpoint, accessKey, secretKey)
 
 		if err != nil {
 			return L.Error(ctx, app, err)
@@ -190,11 +190,11 @@ func (L *OSSURLLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	expires := dynamic.IntValue(L.Get(ctx, app, "expires"), 300)
 
 	endpoint := dynamic.StringValue(L.Get(ctx, app, "endpoint"), "")
-	accessKeyId := dynamic.StringValue(L.Get(ctx, app, "accessKeyId"), "")
-	accessKeySecret := dynamic.StringValue(L.Get(ctx, app, "accessKeySecret"), "")
+	accessKey := dynamic.StringValue(L.Get(ctx, app, "accessKey"), "")
+	secretKey := dynamic.StringValue(L.Get(ctx, app, "secretKey"), "")
 	bucket := dynamic.StringValue(L.Get(ctx, app, "bucket"), "")
 
-	client, err := oss.New(endpoint, accessKeyId, accessKeySecret)
+	client, err := oss.New(endpoint, accessKey, secretKey)
 
 	if err != nil {
 		return L.Error(ctx, app, err)
