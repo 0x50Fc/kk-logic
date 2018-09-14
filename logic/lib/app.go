@@ -7,8 +7,6 @@ import (
 
 type AppLogic struct {
 	logic.Logic
-	app  logic.IApp
-	done string
 }
 
 func init() {
@@ -22,67 +20,61 @@ func init() {
 func (L *AppLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	L.Logic.Exec(ctx, app)
 
-	if L.app == nil {
+	path := dynamic.StringValue(L.Get(ctx, app, "path"), "")
+	a, err := app.Store().Get(path)
 
-		var err error = nil
-		path := dynamic.StringValue(L.Get(ctx, app, "path"), "")
-		L.app, err = app.Store().Get(path)
-		if err != nil {
-			return err
-		}
-
-		L.app.Each(func(name string, v logic.ILogic) bool {
-
-			outlet, ok := v.(*OutletLogic)
-
-			if ok {
-				outlet.OnOutlet = func(ctx logic.IContext, app logic.IApp) error {
-					L.done = name
-					return nil
-				}
-			}
-
-			return true
-		})
+	if err != nil {
+		return err
 	}
 
-	if L.app != nil {
+	params := L.Get(ctx, app, logic.ParamsKeys[0])
+	output := ctx.Get(logic.OutputKeys)
+	ctx.Begin()
+	ctx.Set(logic.OutletKeys, logic.Nil)
+	ctx.Set(logic.ParamsKeys, params)
+	ctx.Set(logic.ResultKeys, logic.Nil)
+	ctx.Set(logic.OutputKeys, output)
+	err = a.Exec(ctx, "in")
+	v := ctx.Get(logic.ResultKeys)
+	outlet := ctx.Get(logic.OutletKeys)
 
-		L.done = "done"
+	if v == logic.Nil {
+		v = nil
+	}
 
-		params := L.Get(ctx, app, logic.ParamsKeys[0])
-		output := ctx.Get(logic.OutputKeys)
-		ctx.Begin()
-		ctx.Set(logic.ParamsKeys, params)
-		ctx.Set(logic.ResultKeys, logic.Nil)
-		ctx.Set(logic.OutputKeys, output)
-		err := L.app.Exec(ctx, "in")
-		v := ctx.Get(logic.ResultKeys)
-		if v == logic.Nil {
-			v = nil
+	if outlet == logic.Nil {
+		outlet = nil
+	}
+
+	ctx.End()
+
+	if err != nil {
+		if L.Has("error") {
+			ctx.Set(logic.ErrorKeys, logic.GetErrorObject(err))
+			return L.Done(ctx, app, "error")
 		}
-		ctx.End()
+		return err
+	}
 
-		if err != nil {
-			if L.Has("error") {
-				ctx.Set(logic.ErrorKeys, logic.GetErrorObject(err))
-				return L.Done(ctx, app, "error")
+	if v != nil {
+		ctx.Set(logic.ResultKeys, v)
+	}
+
+	if outlet != nil {
+
+		done := "done"
+
+		a.Each(func(name string, v logic.ILogic) bool {
+
+			if outlet == v {
+				done = name
+				return false
 			}
-			return err
-		}
+			return true
+		})
 
-		if v != nil {
-			ctx.Set(logic.ResultKeys, v)
-		}
-
-		return L.Done(ctx, app, L.done)
+		return L.Done(ctx, app, "done")
 	}
 
 	return L.Done(ctx, app, "done")
-}
-
-func (L *AppLogic) Recycle() {
-	if L.app != nil {
-		L.app.Recycle()
-	}
 }

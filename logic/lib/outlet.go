@@ -6,17 +6,13 @@ import (
 
 type OutletLogic struct {
 	logic.Logic
-	OnOutlet func(ctx logic.IContext, app logic.IApp) error
 }
 
 func (L *OutletLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 
 	L.Logic.Exec(ctx, app)
 
-	if L.OnOutlet != nil {
-
-		return L.OnOutlet(ctx, app)
-	}
+	ctx.Set(logic.OutletKeys, L)
 
 	return nil
 }

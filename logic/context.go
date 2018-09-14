@@ -29,6 +29,7 @@ var ParamsKeys = []string{"params"}
 var ErrorKeys = []string{"error"}
 var KeyKeys = []string{"key"}
 var MethodKeys = []string{"method"}
+var OutletKeys = []string{"outlet"}
 
 type _Nil struct{}
 
