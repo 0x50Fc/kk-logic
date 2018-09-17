@@ -20,8 +20,34 @@ func (L *VarLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	key := L.Get(ctx, app, "key")
 	value := L.Get(ctx, app, "value")
 	stype := dynamic.StringValue(L.Get(ctx, app, "type"), "")
+	sourceType := dynamic.StringValue(L.Get(ctx, app, "sourceType"), "")
 
 	if key != nil {
+
+		switch sourceType {
+		case "json":
+			b, ok := value.([]byte)
+			if !ok {
+				b = []byte(dynamic.StringValue(value, ""))
+			}
+			value = nil
+			err := json.Unmarshal(b, &value)
+			if err != nil {
+				return L.Error(ctx, app, err)
+			}
+			break
+		case "yaml":
+			b, ok := value.([]byte)
+			if !ok {
+				b = []byte(dynamic.StringValue(value, ""))
+			}
+			value = nil
+			err := yaml.Unmarshal(b, &value)
+			if err != nil {
+				return L.Error(ctx, app, err)
+			}
+			break
+		}
 
 		switch stype {
 		case "json":
@@ -39,6 +65,7 @@ func (L *VarLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 			value = string(b)
 			break
 		}
+
 		skey := dynamic.StringValue(key, "")
 		ctx.Set(strings.Split(skey, "."), value)
 	}

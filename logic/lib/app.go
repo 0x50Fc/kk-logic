@@ -20,11 +20,31 @@ func init() {
 func (L *AppLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	L.Logic.Exec(ctx, app)
 
-	path := dynamic.StringValue(L.Get(ctx, app, "path"), "")
-	a, err := app.Store().Get(path)
+	var a logic.IApp = nil
+	var err error = nil
 
-	if err != nil {
-		return err
+	path := dynamic.StringValue(L.Get(ctx, app, "path"), "")
+
+	if path != "" {
+
+		a, err = app.Store().Get(path)
+
+		if err != nil {
+			return err
+		}
+
+	} else {
+
+		object := L.Get(ctx, app, "object")
+
+		if object != nil {
+			a = logic.NewApp(object, app.Store(), "<object>")
+			defer a.Recycle()
+		}
+	}
+
+	if a == nil {
+		return L.Error(ctx, app, logic.NewError(logic.ERROR_UNKNOWN, "未找到应用"))
 	}
 
 	params := L.Get(ctx, app, logic.ParamsKeys[0])
