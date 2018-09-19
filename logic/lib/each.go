@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/hailongz/kk-lib/dynamic"
@@ -89,7 +90,7 @@ func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 			v := []interface{}{}
 			for i, vv := range a {
 				ctx.Set(logic.KeyKeys, i)
-				vv := L.item(ctx, app, vv, fields)
+				vv = L.item(ctx, app, vv, fields)
 				if vv != nil {
 					v = append(v, vv)
 				}
@@ -105,7 +106,7 @@ func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 			v := map[string]interface{}{}
 			for key, vv := range a {
 				ctx.Set(logic.KeyKeys, key)
-				vv := L.item(ctx, app, vv, fields)
+				vv = L.item(ctx, app, vv, fields)
 				if vv != nil {
 					v[key] = vv
 				}
@@ -113,6 +114,37 @@ func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 			ctx.Set(keys, v)
 			return L.Done(ctx, app, "done")
 		}
+	}
+
+	switch reflect.ValueOf(value).Kind() {
+	case reflect.Slice:
+		v := []interface{}{}
+		dynamic.Each(value, func(key interface{}, vv interface{}) bool {
+			ctx.Set(logic.KeyKeys, key)
+			vv = L.item(ctx, app, vv, fields)
+			if vv != nil {
+				v = append(v, vv)
+			}
+			return true
+		})
+		ctx.Set(keys, v)
+		return L.Done(ctx, app, "done")
+	}
+
+	{
+		v := map[string]interface{}{}
+
+		dynamic.Each(value, func(key interface{}, vv interface{}) bool {
+			skey := dynamic.StringValue(key, "")
+			ctx.Set(logic.KeyKeys, skey)
+			vv = L.item(ctx, app, vv, fields)
+			if vv != nil {
+				v[skey] = vv
+			}
+			return true
+		})
+
+		ctx.Set(keys, v)
 	}
 
 	return L.Done(ctx, app, "done")
