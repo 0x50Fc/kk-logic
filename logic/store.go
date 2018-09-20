@@ -16,8 +16,15 @@ import (
 type IStore interface {
 	Dir() string
 	Get(path string) (IApp, error)
+	GetContent(path string) ([]byte, error)
 	Walk(fn func(path string))
 	Recycle()
+}
+
+type storeContent struct {
+	content []byte
+	endTime time.Time
+	modTime time.Time
 }
 
 type storeApp struct {
@@ -27,16 +34,18 @@ type storeApp struct {
 }
 
 type MemStore struct {
-	dir     string
-	app     map[string]*storeApp
-	expires time.Duration
-	lock    sync.RWMutex
+	dir      string
+	app      map[string]*storeApp
+	contents map[string]*storeContent
+	expires  time.Duration
+	lock     sync.RWMutex
 }
 
 func NewMemStore(dir string, expires time.Duration) *MemStore {
 	v := MemStore{}
 	v.dir = dir
 	v.app = map[string]*storeApp{}
+	v.contents = map[string]*storeContent{}
 	v.expires = expires
 	return &v
 }
@@ -128,6 +137,61 @@ func (S *MemStore) Get(path string) (IApp, error) {
 	}
 
 	return app, nil
+}
+
+func (S *MemStore) GetContent(path string) ([]byte, error) {
+
+	atime := time.Now()
+
+	S.lock.RLock()
+
+	v, ok := S.contents[path]
+
+	S.lock.RUnlock()
+
+	if ok && atime.Before(v.endTime) {
+		return v.content, nil
+	}
+
+	p := filepath.Join(S.dir, path)
+
+	st, err := os.Stat(p)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ok {
+		if v.modTime.Equal(st.ModTime()) {
+			v.endTime = atime.Add(S.expires)
+			return v.content, nil
+		}
+	}
+
+	fd, err := os.Open(p)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer fd.Close()
+
+	b, err := ioutil.ReadAll(fd)
+
+	if err != nil {
+		return nil, err
+	}
+
+	vv := &storeContent{}
+	vv.content = b
+	vv.modTime = st.ModTime()
+	vv.endTime = atime.Add(S.expires)
+
+	S.lock.Lock()
+	S.contents[path] = vv
+	S.lock.Unlock()
+
+	return b, nil
 }
 
 func (S *MemStore) Walk(fn func(path string)) {

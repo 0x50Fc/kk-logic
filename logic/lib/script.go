@@ -15,6 +15,24 @@ func (L *ScriptLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 
 	code := L.Get(ctx, app, "code")
 
+	if code == nil {
+
+		path := L.Get(ctx, app, "path")
+
+		if path != nil {
+
+			s := app.Store()
+
+			if s != nil {
+				b, err := s.GetContent(dynamic.StringValue(path, ""))
+				if err != nil {
+					return L.Error(ctx, app, err)
+				}
+				code = string(b)
+			}
+		}
+	}
+
 	done := "done"
 
 	if code != nil {
