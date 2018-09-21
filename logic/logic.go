@@ -14,8 +14,9 @@ type LogicCreator func(object interface{}) ILogic
 
 type ILogic interface {
 	Object() interface{}
-	EvaluateValue(ctx IContext, app IApp, value interface{}, object interface{}) interface{}
+	EvaluateValue(ctx IContext, app IApp, value interface{}, object interface{}) (interface{}, error)
 	Get(ctx IContext, app IApp, key string) interface{}
+	GetWithError(ctx IContext, app IApp, key string) (interface{}, error)
 	Exec(ctx IContext, app IApp) error
 	On(name string, value interface{})
 	Done(ctx IContext, app IApp, name string) error
@@ -87,10 +88,10 @@ func (L *Logic) Object() interface{} {
 	return L.object
 }
 
-func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object interface{}) interface{} {
+func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object interface{}) (interface{}, error) {
 
 	if value == nil {
-		return nil
+		return nil, nil
 	}
 
 	{
@@ -99,7 +100,7 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 			if strings.HasPrefix(s, "=") {
 				return ctx.Evaluate(s[1:], L.Tag)
 			}
-			return s
+			return s, nil
 		}
 	}
 
@@ -110,13 +111,13 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 			ctx.Begin()
 			ctx.Set(ObjectKeys, object)
 			ctx.Set(ResultKeys, Nil)
-			s.Exec(ctx, app)
+			err := s.Exec(ctx, app)
 			v := ctx.Get(ResultKeys)
 			if v == Nil {
 				v = nil
 			}
 			ctx.End()
-			return v
+			return v, err
 		}
 	}
 
@@ -126,12 +127,15 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 		if ok {
 			v := []interface{}{}
 			for _, i := range s {
-				vv := L.EvaluateValue(ctx, app, i, object)
+				vv, err := L.EvaluateValue(ctx, app, i, object)
+				if err != nil {
+					return nil, err
+				}
 				if vv != nil {
 					v = append(v, vv)
 				}
 			}
-			return v
+			return v, nil
 		}
 	}
 
@@ -150,12 +154,15 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 		if ok {
 			v := map[string]interface{}{}
 			for key, i := range s {
-				vv := L.EvaluateValue(ctx, app, i, object)
+				vv, err := L.EvaluateValue(ctx, app, i, object)
+				if err != nil {
+					return nil, err
+				}
 				if vv != nil {
 					v[key] = vv
 				}
 			}
-			return v
+			return v, nil
 		}
 	}
 
@@ -165,19 +172,30 @@ func (L *Logic) EvaluateValue(ctx IContext, app IApp, value interface{}, object 
 		if ok {
 			v := map[string]interface{}{}
 			for key, i := range s {
-				vv := L.EvaluateValue(ctx, app, i, object)
+				vv, err := L.EvaluateValue(ctx, app, i, object)
+				if err != nil {
+					return nil, err
+				}
 				if vv != nil {
 					v[dynamic.StringValue(key, "")] = vv
 				}
 			}
-			return v
+			return v, nil
 		}
 	}
 
-	return value
+	return value, nil
 }
 
 func (L *Logic) Get(ctx IContext, app IApp, key string) interface{} {
+	v, err := L.GetWithError(ctx, app, key)
+	if err != nil {
+		log.Println("[ERROR]", err)
+	}
+	return v
+}
+
+func (L *Logic) GetWithError(ctx IContext, app IApp, key string) (interface{}, error) {
 	return L.EvaluateValue(ctx, app, dynamic.Get(L.object, key), L.object)
 }
 

@@ -43,7 +43,7 @@ type IContext interface {
 	Get(keys []string) interface{}
 	Set(keys []string, value interface{})
 	SetGlobal(key string, value interface{})
-	Evaluate(evaluateCode string, name string) interface{}
+	Evaluate(evaluateCode string, name string) (interface{}, error)
 	Call(evaluateCode string, name string, done func(name string)) error
 	Recycle()
 	AddRecycle(fn func())
@@ -470,9 +470,10 @@ func (C *Context) Call(evaluateCode string, name string, done func(name string))
 	return err
 }
 
-func (C *Context) Evaluate(evaluateCode string, name string) interface{} {
+func (C *Context) Evaluate(evaluateCode string, name string) (interface{}, error) {
 
 	var v interface{} = nil
+	var err error = nil
 
 	C.jsContext.PushString(name)
 	C.jsContext.CompileStringFilename(0, "(function(object,evaluate){ var _G; with (object) { _G = eval('(' + evaluate + ')'); } return _G;})")
@@ -488,17 +489,17 @@ func (C *Context) Evaluate(evaluateCode string, name string) interface{} {
 			if C.jsContext.Pcall(2) == duktape.ExecSuccess {
 				v = toValue(C.jsContext, -1)
 			} else {
-				dumpError(C.jsContext, "[CONTEXT] [Evaluate]", -1)
+				err = NewError(ERROR_UNKNOWN, getErrorString(C.jsContext, -1))
 			}
 
 		} else {
-			dumpError(C.jsContext, "[CONTEXT] [Evaluate]", -1)
+			err = NewError(ERROR_UNKNOWN, getErrorString(C.jsContext, -1))
 		}
 	}
 
 	C.jsContext.Pop()
 
-	return v
+	return v, err
 
 }
 

@@ -23,12 +23,13 @@ func setValue(v map[string]interface{}, key string, value interface{}) {
 	}
 }
 
-func (L *EachLogic) item(ctx logic.IContext, app logic.IApp, object interface{}, fields interface{}) interface{} {
+func (L *EachLogic) item(ctx logic.IContext, app logic.IApp, object interface{}, fields interface{}) (interface{}, error) {
 
 	if fields == nil {
-		return object
+		return object, nil
 	}
 
+	var err error = nil
 	v := map[string]interface{}{}
 
 	dynamic.Each(fields, func(key interface{}, value interface{}) bool {
@@ -41,8 +42,11 @@ func (L *EachLogic) item(ctx logic.IContext, app logic.IApp, object interface{},
 				if strings.HasPrefix(s, "=") {
 					ctx.Begin()
 					ctx.Set(logic.ObjectKeys, object)
-					value = L.EvaluateValue(ctx, app, value, object)
+					value, err = L.EvaluateValue(ctx, app, value, object)
 					ctx.End()
+					if err != nil {
+						return false
+					}
 				} else {
 					value = dynamic.GetWithKeys(object, strings.Split(s, "."))
 				}
@@ -53,14 +57,18 @@ func (L *EachLogic) item(ctx logic.IContext, app logic.IApp, object interface{},
 			}
 		}
 
-		value = L.EvaluateValue(ctx, app, value, object)
+		value, err = L.EvaluateValue(ctx, app, value, object)
+
+		if err != nil {
+			return false
+		}
 
 		setValue(v, skey, value)
 
 		return true
 	})
 
-	return v
+	return v, err
 }
 
 func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
@@ -84,13 +92,19 @@ func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 		return L.Done(ctx, app, "done")
 	}
 
+	var err error = nil
+
 	{
 		a, ok := value.([]interface{})
 		if ok {
+
 			v := []interface{}{}
 			for i, vv := range a {
 				ctx.Set(logic.KeyKeys, i)
-				vv = L.item(ctx, app, vv, fields)
+				vv, err = L.item(ctx, app, vv, fields)
+				if err != nil {
+					return L.Error(ctx, app, err)
+				}
 				if vv != nil {
 					v = append(v, vv)
 				}
@@ -106,18 +120,28 @@ func (L *EachLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 			v := []interface{}{}
 			dynamic.Each(value, func(key interface{}, vv interface{}) bool {
 				ctx.Set(logic.KeyKeys, key)
-				vv = L.item(ctx, app, vv, fields)
+				vv, err = L.item(ctx, app, vv, fields)
+				if err != nil {
+					return false
+				}
 				if vv != nil {
 					v = append(v, vv)
 				}
 				return true
 			})
+			if err != nil {
+				return L.Error(ctx, app, err)
+			}
 			ctx.Set(keys, v)
 			return L.Done(ctx, app, "done")
 		}
 	}
 
-	v := L.item(ctx, app, value, fields)
+	v, err := L.item(ctx, app, value, fields)
+
+	if err != nil {
+		return L.Error(ctx, app, err)
+	}
 
 	ctx.Set(keys, v)
 
