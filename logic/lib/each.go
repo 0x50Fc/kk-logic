@@ -44,7 +44,7 @@ func (L *EachLogic) item(ctx logic.IContext, app logic.IApp, object interface{},
 					value = L.EvaluateValue(ctx, app, value, object)
 					ctx.End()
 				} else {
-					value = dynamic.Get(object, s)
+					value = dynamic.GetWithKeys(object, strings.Split(s, "."))
 				}
 
 				setValue(v, skey, value)
