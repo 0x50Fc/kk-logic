@@ -1,6 +1,8 @@
 package http
 
 import (
+	"log"
+
 	"github.com/hailongz/kk-lib/dynamic"
 	"github.com/hailongz/kk-lib/http"
 	"github.com/hailongz/kk-logic/logic"
@@ -23,6 +25,8 @@ func (L *HttpLogic) Exec(ctx logic.IContext, app logic.IApp) error {
 	options.Type = dynamic.StringValue(L.Get(ctx, app, "type"), http.OptionTypeUrlencode)
 	options.ResponseType = dynamic.StringValue(L.Get(ctx, app, "dataType"), http.OptionResponseTypeJson)
 	options.Data = L.Get(ctx, app, "data")
+
+	log.Println("[HTTP]", options.Url)
 
 	v, err := http.Send(&options)
 
